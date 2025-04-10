@@ -46,6 +46,7 @@ dependencies = [
     'tifffile',
     'requests',
     "nibabel",
+    "torchvision",
     "matplotlib",
     "seaborn",
     "imagecodecs",
