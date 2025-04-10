@@ -32,6 +32,7 @@ class nnUNetTrainerMRCT_imene8_trilinear(nnUNetTrainer):
         self.num_iterations_per_epoch = 250
         self.num_epochs = 1000
         self.perceptual_loss = UNet_layers("Imene8")
+        self.decoder_type = "trilinear"
 
 
     def _build_loss(self):
