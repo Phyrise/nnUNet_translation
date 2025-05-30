@@ -30,8 +30,8 @@ class nnUNetTrainerMRCT_mae(nnUNetTrainer):
     ):
         super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
         self.enable_deep_supervision = False
-        self.num_iterations_per_epoch = 10
-        self.num_epochs = 2000
+        self.num_iterations_per_epoch = 250
+        self.num_epochs = 1000
 
     def _build_loss(self):
         loss = myMAE()
