@@ -145,12 +145,6 @@ class nnUNetTrainerMRCT_mae(nnUNetTrainer):
 
         with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
-
-            torch.save(data, "data")
-            torch.save(output, "output")
-            torch.save(target, "target")
-            
-            assert(0)
             del data
             mae_loss = myMAE()
             l = mae_loss(output, target)
