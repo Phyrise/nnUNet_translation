@@ -1,6 +1,6 @@
 from typing import Type
 
-from nnunetv2.preprocessing.normalization.default_normalization_schemes import CTNormalization, NoNormalization, \
+from nnunetv2.preprocessing.normalization.default_normalization_schemes import CTNormalization, CTNormalization_noclip, NoNormalization, \
     ZScoreNormalization, RescaleTo01Normalization, RGBTo01Normalization, ImageNormalization, CTtanh, MRtanh
 
 channel_name_to_normalization_mapping = {
