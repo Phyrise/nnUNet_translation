@@ -66,9 +66,21 @@ class CTNormalization(ImageNormalization):
         image /= max(std_intensity, 1e-8)
         return image
     
+class CTNormalization_noclip(ImageNormalization):
+    leaves_pixels_outside_mask_at_zero_if_use_mask_for_norm_is_true = False
+    def run(self, image: np.ndarray, seg: np.ndarray = None) -> np.ndarray:
+        assert self.intensityproperties is not None, "CTNormalization requires intensity properties"
+        mean_intensity = self.intensityproperties['mean']
+        std_intensity = self.intensityproperties['std']
+        image = image.astype(self.target_dtype, copy=False)
+        image -= mean_intensity
+        image /= max(std_intensity, 1e-8)
+        return image
+    
 class CTtanh(ImageNormalization):
     _min = -1024
     _max = 3071
+    leaves_pixels_outside_mask_at_zero_if_use_mask_for_norm_is_true = False
     def run(self, image: np.ndarray, seg: np.ndarray = None) -> np.ndarray:
         print(f"range for CTtanh normalization : {_min} to {_max}")
         image = image.astype(self.target_dtype, copy=False)
