@@ -69,7 +69,7 @@ class nnUNetPredictor(object):
     def initialize_from_trained_model_folder(self, model_training_output_dir: str,
                                              use_folds: Union[Tuple[Union[int, str]], None],
                                              checkpoint_name: str = 'checkpoint_final.pth',
-                                             decoder_type: str = "trilinear"): 
+                                             decoder_type: str = "standard"): 
         """
         This is used when making predictions with a trained model
         """
@@ -573,7 +573,8 @@ class nnUNetPredictor(object):
         vol /= n_predictions
         return vol
 
-    def rec_median(self, slicers, data, max_layers=50):
+    def rec_median(self, slicers, data, max_layers=25):     
+        # TODO: Reimplement more efficiently (currently RAM-heavy, naive for-loops; constrained by max_layers)
         results_device = self.device
 
         vol = torch.zeros((max_layers, *data.shape),dtype=torch.float32)
