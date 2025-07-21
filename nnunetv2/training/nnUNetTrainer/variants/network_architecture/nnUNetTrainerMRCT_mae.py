@@ -30,8 +30,8 @@ class nnUNetTrainerMRCT_mae(nnUNetTrainer):
     ):
         super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
         self.enable_deep_supervision = False
-        self.num_iterations_per_epoch = 10
-        self.num_epochs = 2000
+        self.num_iterations_per_epoch = 250
+        self.num_epochs = 1000
 
     def _build_loss(self):
         loss = myMAE()
@@ -145,12 +145,6 @@ class nnUNetTrainerMRCT_mae(nnUNetTrainer):
 
         with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
-
-            torch.save(data, "data")
-            torch.save(output, "output")
-            torch.save(target, "target")
-            
-            assert(0)
             del data
             mae_loss = myMAE()
             l = mae_loss(output, target)
