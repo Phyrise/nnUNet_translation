@@ -1,4 +1,4 @@
-# nnUNet_translation [in progress]
+# nnUNet_translation 
 For further information, please contact me by e-mail : arthur.longuefosse [at] gmail.com 
 
 Please cite our workshop paper when using nnU-Net_translation :
@@ -46,6 +46,7 @@ inference :
 - --rec allows to choose between mean and median reconstruction for overlapping patches 
 
 ## TODO : 
-- clean the mess (update 06/08/2024 : looks ok right ?)
 - add arguments to control :
     - output channel size (for now : 1)
+- clean the code for AFP loss (for now : in loss/perceptual.py)
+    - add an automatic padding for feature extraction (make sure it's a multiple of 2^5)
