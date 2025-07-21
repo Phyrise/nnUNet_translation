@@ -5,7 +5,7 @@ from typing import Union, Tuple, List
 from batchgenerators.transforms.abstract_transforms import AbstractTransform
 
 import numpy as np
-from nnunetv2.training.loss.mae import myMSE
+from nnunetv2.training.loss.mse import myMSE
 
 from nnunetv2.training.dataloading.data_loader_2d import nnUNetDataLoader2D_MRCT
 from nnunetv2.training.dataloading.data_loader_3d import nnUNetDataLoader3D_MRCT
