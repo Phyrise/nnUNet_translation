@@ -140,6 +140,14 @@ class UNet_layers(nn.Module):
                 "weights_path" : "/data2/alonguefosse/checkpoints/naviairway_semi_supervise.pkl",
                 "model_type": "NaviAirway"
             },
+
+            "TotalSeg_HN_V2": { #1*1*3mm
+                "weights_path": "/home/phy/Documents/nnUNet/results/Dataset880_TotalSegV2_HN/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "PlainConvUNet"
+            },
         }
         params = model_params[net]
         kernel = params.get("kernels", [[3, 3, 3]] * 6)
@@ -165,7 +173,7 @@ class UNet_layers(nn.Module):
         
         if not os.path.exists(params["weights_path"]):
             raise FileNotFoundError(f'Error: Checkpoint not found at {params["weights_path"]}')
-        checkpoint = torch.load(params["weights_path"], map_location='cuda')
+        checkpoint = torch.load(params["weights_path"], map_location='cuda', weights_only = False)
         model_state_dict = checkpoint.get('state_dict', checkpoint.get('network_weights', checkpoint.get('model_state_dict')))
         model.load_state_dict(model_state_dict, strict=False)
         print(f"loaded model : {params['weights_path']}")
@@ -187,23 +195,13 @@ class UNet_layers(nn.Module):
         """
         todo : check if normalization of input tensors is needed
         """
-
         if self.stages==5:
-            padding = (0, 0, 8, 8, 0, 0) #hard coded for lungs. TODO: adapt to be multiple of 2^self.stages
+            padding = (0, 0, 0, 0, 4, 4) #hard coded. TODO: adapt to be multiple of 2^self.stages
             x = F.pad(x, padding, mode='constant', value=0)  
             y = F.pad(y, padding, mode='constant', value=0)  
 
-        emb_x = self.model(x[:,0:1])  
+        emb_x = self.model(x)  
         emb_y = self.model(y)
-        
-
-        if self.debug:
-            torch.save(x, "embs/x_ep50")
-            torch.save(y, "embs/y_ep50")
-            for i in range(len(emb_y)):
-                torch.save(emb_y[i], f"embs/emb_y_{i}_ep50")
-                torch.save(emb_x[i], f"embs/emb_x_{i}_ep50")
-            assert(0)
 
         sum_loss = 0
         layer_losses = []
@@ -221,6 +219,13 @@ class UNet_layers(nn.Module):
                 file.write(f"Layer {i}: Loss = {loss}\n")
             file.write(f"-------------------\n")
 
+        if self.debug:
+            torch.save(x, "embs/x_ep50")
+            torch.save(y, "embs/y_ep50")
+            for i in range(len(emb_y)):
+                torch.save(emb_y[i], f"embs/emb_y_{i}_ep50")
+                torch.save(emb_x[i], f"embs/emb_x_{i}_ep50")
+            assert(0)
         return sum_loss
     
 
@@ -259,6 +264,14 @@ class L1_UNet_layers(nn.Module):
                 "weights_path" : "/data2/alonguefosse/checkpoints/naviairway_semi_supervise.pkl",
                 "model_type": "NaviAirway"
             },
+        
+            "TotalSeg_HN_V2": { #1*1*3mm
+                "weights_path": "/home/phy/Documents/nnUNet/results/Dataset880_TotalSegV2_HN/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "PlainConvUNet"
+            },
         }
         params = model_params[net]
         kernel = params.get("kernels", [[3, 3, 3]] * 6)
@@ -284,7 +297,7 @@ class L1_UNet_layers(nn.Module):
         
         if not os.path.exists(params["weights_path"]):
             raise FileNotFoundError(f'Error: Checkpoint not found at {params["weights_path"]}')
-        checkpoint = torch.load(params["weights_path"], map_location='cuda')
+        checkpoint = torch.load(params["weights_path"], map_location='cuda', weights_only=False)
         model_state_dict = checkpoint.get('state_dict', checkpoint.get('network_weights', checkpoint.get('model_state_dict')))
         model.load_state_dict(model_state_dict, strict=False)
         print(f"loaded model : {params['weights_path']}")
@@ -310,11 +323,11 @@ class L1_UNet_layers(nn.Module):
         """
 
         if self.stages==5:
-            padding = (0, 0, 8, 8, 0, 0) #hard coded for lungs. TODO: adapt to be multiple of 2^self.stages
+            padding = (0, 0, 0, 0, 4, 4) #hard coded. TODO: adapt to be multiple of 2^self.stages
             x = F.pad(x, padding, mode='constant', value=0)  
             y = F.pad(y, padding, mode='constant', value=0)  
 
-        emb_x = self.model(x[:,0:1])  
+        emb_x = self.model(x)  
         emb_y = self.model(y)
         
 
@@ -344,7 +357,7 @@ class L1_UNet_layers(nn.Module):
             
 
 
-        mae_loss = self.L1(x[:, 0:1].cpu(), y.cpu()) * self.mae_weight
+        mae_loss = self.L1(x.cpu(), y.cpu()) * self.mae_weight
         mae_loss = mae_loss.cuda()
 
         # mae_loss = 0

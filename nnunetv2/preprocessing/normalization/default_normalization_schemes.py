@@ -67,9 +67,10 @@ class CTNormalization(ImageNormalization):
         return image
     
 class CTtanh(ImageNormalization):
-    _min = -1000
-    _max = 2000
+    _min = -1024
+    _max = 3071
     def run(self, image: np.ndarray, seg: np.ndarray = None) -> np.ndarray:
+        print(f"range for CTtanh normalization : {_min} to {_max}")
         image = image.astype(self.target_dtype, copy=False)
         np.clip(image, self._min, self._max, out=image)
         image -= self._min
