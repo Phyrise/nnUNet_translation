@@ -1,11 +1,12 @@
 from typing import Type
 
-from nnunetv2.preprocessing.normalization.default_normalization_schemes import CTNormalization, CTNormalization_noclip, NoNormalization, \
+from nnunetv2.preprocessing.normalization.default_normalization_schemes import CTNormalization, CTNormalization_clip, CTNormalization_noclip, NoNormalization, \
     ZScoreNormalization, RescaleTo01Normalization, RGBTo01Normalization, ImageNormalization, CTtanh, MRtanh
 
 channel_name_to_normalization_mapping = {
     'CT': CTNormalization,
     'CT_noclip': CTNormalization_noclip,
+    'CT_clip': CTNormalization_clip,
     'noNorm': NoNormalization,
     'zscore': ZScoreNormalization,
     'rescale_to_0_1': RescaleTo01Normalization,
