@@ -4,6 +4,7 @@ import numpy as np
 from .unet import PlainConvUNet
 from .segairway import SegAirwayModel
 import torch.nn.functional as F
+import math
 
 class AFP(nn.Module):
     def __init__(self, net: str = "", layers=[], mae_weight=0.0):
@@ -38,9 +39,15 @@ class AFP(nn.Module):
                 "weights_path" : "/data2/alonguefosse/checkpoints/naviairway_semi_supervise.pkl",
                 "model_type": "NaviAirway"
             },
-
             "TotalSeg_HN_V2": { #1*1*3mm
                 "weights_path": "/home/phy/Documents/nnUNet/results/Dataset880_TotalSegV2_HN/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "PlainConvUNet"
+            },
+            "TotalSeg_V2": { #1*1*3mm
+                "weights_path": "/home/phy/Documents/nnUNet/results/Dataset881_TotalSegV2_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
                 "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
                 "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
                 "num_classes": 7,
@@ -82,14 +89,22 @@ class AFP(nn.Module):
         self.print_perceptual_layers = False
         self.debug = False
 
+    def center_pad_to_multiple_of_2pow(self, x):
+        factor = 2 ** self.stages
+        shape = x.shape[-3:]  
+        pad = []
+        for s in reversed(shape):  # reverse order for F.pad
+            new = ((s + factor - 1) // factor) * factor
+            total = new - s
+            pad.extend([total // 2, total - total // 2])
+        return F.pad(x, pad, mode='constant', value=0)
+
     def forward(self, x, y): 
         """
         todo : check if normalization of input tensors is needed
         """
-        if self.stages==5:
-            padding = (0, 0, 0, 0, 4, 4) #hard coded. TODO: adapt to be multiple of 2^self.stages
-            x = F.pad(x, padding, mode='constant', value=0)  
-            y = F.pad(y, padding, mode='constant', value=0)  
+        x = self.center_pad_to_multiple_of_2pow(x)
+        y = self.center_pad_to_multiple_of_2pow(y)
 
         emb_x = self.model(x)  
         emb_y = self.model(y)
@@ -105,12 +120,11 @@ class AFP(nn.Module):
                 print(f"task loss", i, " |", emb_x[i].shape)
                 print(layer_loss)
 
-        with open(f'losses_{self.net}.txt', 'a') as file:
-            for i, loss in layer_losses:
-                file.write(f"Layer {i}: Loss = {loss}\n")
-            file.write(f"-------------------\n")
-
         if self.debug:
+            with open(f'losses_{self.net}.txt', 'a') as file:
+                for i, loss in layer_losses:
+                    file.write(f"Layer {i}: Loss = {loss}\n")
+                file.write(f"-------------------\n")
             torch.save(x, "embs/x_ep50")
             torch.save(y, "embs/y_ep50")
             for i in range(len(emb_y)):
