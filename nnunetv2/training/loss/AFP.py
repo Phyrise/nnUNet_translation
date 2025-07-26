@@ -88,6 +88,7 @@ class AFP(nn.Module):
         self.net = net
         self.print_perceptual_layers = False
         self.debug = False
+        self.mae_weight = mae_weight
 
     def center_pad_to_multiple_of_2pow(self, x):
         factor = 2 ** self.stages

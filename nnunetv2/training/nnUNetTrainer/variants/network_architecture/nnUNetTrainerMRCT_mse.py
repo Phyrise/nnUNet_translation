@@ -146,8 +146,8 @@ class nnUNetTrainerMRCT_mse(nnUNetTrainer):
         with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
             del data
-            mae_loss = myMAE()
-            l = mae_loss(output, target)
+            mse_loss = myMSE()
+            l = mse_loss(output, target)
 
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': 0, 'fp_hard': 0, 'fn_hard': 0}
 

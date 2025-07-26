@@ -34,9 +34,10 @@ class nnUNetTrainerMRCT_AFP(nnUNetTrainer):
         self.num_epochs = 1000
         self.decoder_type = "trilinear"
         self.batch_size = 1
+        self.AFP_loss = AFP(net = "TotalSeg_V2", mae_weight=0.3)
 
     def _build_loss(self):
-        loss = AFP("TotalSeg_V2")
+        loss = self.AFP_loss
         return loss
 
     @staticmethod
@@ -148,9 +149,7 @@ class nnUNetTrainerMRCT_AFP(nnUNetTrainer):
         with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
             del data
-            mae_loss = myMAE()
-            l = mae_loss(output, target)
-
+            l = self.AFP_loss(output, target)
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': 0, 'fp_hard': 0, 'fn_hard': 0}
 
 
