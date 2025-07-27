@@ -99,6 +99,9 @@ class AFP(nn.Module):
             total = new - s
             pad.extend([total // 2, total - total // 2])
         return F.pad(x, pad, mode='constant', value=0)
+    
+    def get_last_layer(self):
+        return self.emb_x[-1], self.emb_y[-1]
 
     def forward(self, x, y): 
         """
@@ -109,6 +112,9 @@ class AFP(nn.Module):
 
         emb_x = self.model(x)  
         emb_y = self.model(y)
+
+        self.emb_x = emb_x
+        self.emb_y = emb_y
 
         AFP_loss = 0
         layer_losses = []
