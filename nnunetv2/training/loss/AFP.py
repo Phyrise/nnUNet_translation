@@ -46,7 +46,7 @@ class AFP(nn.Module):
                 "num_classes": 7,
                 "model_type": "PlainConvUNet"
             },
-            "TotalSeg_V2": { #1*1*3mm
+            "TotalSeg_ABTH_V2": { #1*1*3mm
                 "weights_path": "/home/phy/Documents/nnUNet/results/Dataset881_TotalSegV2_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
                 "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
                 "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
@@ -57,7 +57,7 @@ class AFP(nn.Module):
         params = model_params[net]
         kernel = params.get("kernels", [[3, 3, 3]] * 6)
         if params["model_type"] == "PlainConvUNet":
-            self.layers = layers if layers is not None else [0,1,2,3,4,5,6,7,8]
+            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6, 7, 8]
             self.stages = 5
             model = PlainConvUNet(input_channels=1, n_stages=6, features_per_stage=[32, 64, 128, 256, 320, 320], 
                                 conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
@@ -66,7 +66,7 @@ class AFP(nn.Module):
                                 norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
                                 nonlin_kwargs={'inplace': True})
         elif params["model_type"] == "NaviAirway":
-            self.layers = layers if layers is not None else [0,1,2,3,4,5,6]
+            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6]
             self.stages = 4
             model = SegAirwayModel(in_channels=1, out_channels=2)
         

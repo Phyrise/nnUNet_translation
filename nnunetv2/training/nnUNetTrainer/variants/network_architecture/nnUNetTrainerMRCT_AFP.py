@@ -32,9 +32,9 @@ class nnUNetTrainerMRCT_AFP(nnUNetTrainer):
         self.enable_deep_supervision = False
         self.num_iterations_per_epoch = 250
         self.num_epochs = 1000
-        self.decoder_type = "trilinear"
+        self.decoder_type = "standard"
         self.batch_size = 1
-        self.AFP_loss = AFP(net = "TotalSeg_V2", mae_weight=0.3)
+        self.AFP_loss = AFP(net = "TotalSeg_ABTH_V2", mae_weight=0.3)
 
     def _build_loss(self):
         loss = self.AFP_loss
