@@ -48,5 +48,3 @@ inference :
 ## TODO : 
 - add arguments to control :
     - output channel size (for now : 1)
-- clean the code for AFP loss (for now : in loss/perceptual.py)
-    - add an automatic padding for feature extraction (make sure it's a multiple of 2^5)
