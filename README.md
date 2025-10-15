@@ -17,7 +17,7 @@ Along with the original nnUNet paper :
     
 ## How to use it : 
 ```bash
-# I recommend creating a dedicated environment
+# Please use a dedicated environement to avoid conflit with original nnUNet implementation
 git clone https://github.com/Phyrise/nnUNet_translation 
 cd nnUNet_translation
 pip install -e .
