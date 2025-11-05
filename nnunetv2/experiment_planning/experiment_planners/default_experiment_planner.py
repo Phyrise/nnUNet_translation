@@ -26,8 +26,7 @@ class ExperimentPlanner(object):
                  gpu_memory_target_in_gb: float = 8,
                  preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnUNetPlans',
                  overwrite_target_spacing: Union[List[float], Tuple[float, ...]] = None,
-                 suppress_transpose: bool = False,
-                 decoder_type: str = "standard"):
+                 suppress_transpose: bool = False):
         """
         overwrite_target_spacing only affects 3d_fullres! (but by extension 3d_lowres which starts with fullres may
         also be affected
@@ -75,7 +74,6 @@ class ExperimentPlanner(object):
         self.preprocessor_name = preprocessor_name
         self.plans_identifier = plans_name
         self.overwrite_target_spacing = overwrite_target_spacing
-        self.decoder_type = decoder_type 
         assert overwrite_target_spacing is None or len(overwrite_target_spacing), 'if overwrite_target_spacing is ' \
                                                                                   'used then three floats must be ' \
                                                                                   'given (as list or tuple)'
@@ -167,10 +165,10 @@ class ExperimentPlanner(object):
         if self.overwrite_target_spacing is not None:
             return np.array(self.overwrite_target_spacing)
 
-        spacings = self.dataset_fingerprint['spacings']
+        spacings = np.vstack(self.dataset_fingerprint['spacings'])
         sizes = self.dataset_fingerprint['shapes_after_crop']
 
-        target = np.percentile(np.vstack(spacings), 50, 0)
+        target = np.percentile(spacings, 50, 0)
 
         # todo sizes_after_resampling = [compute_new_shape(j, i, target) for i, j in zip(spacings, sizes)]
 
@@ -189,7 +187,7 @@ class ExperimentPlanner(object):
         has_aniso_voxels = target_size[worst_spacing_axis] * self.anisotropy_threshold < min(other_sizes)
 
         if has_aniso_spacing and has_aniso_voxels:
-            spacings_of_that_axis = np.vstack(spacings)[:, worst_spacing_axis]
+            spacings_of_that_axis = spacings[:, worst_spacing_axis]
             target_spacing_of_that_axis = np.percentile(spacings_of_that_axis, 10)
             # don't let the spacing of that axis get higher than the other axes
             if target_spacing_of_that_axis < max(other_spacings):
@@ -295,7 +293,6 @@ class ExperimentPlanner(object):
                 'dropout_op_kwargs': None,
                 'nonlin': 'torch.nn.LeakyReLU',
                 'nonlin_kwargs': {'inplace': True},
-                'decoder_type': self.decoder_type, 
             },
             '_kw_requires_import': ('conv_op', 'norm_op', 'dropout_op', 'nonlin'),
         }

@@ -13,8 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import multiprocessing
-import re
-from multiprocessing import Pool
 from typing import Type
 
 import numpy as np
@@ -25,8 +23,7 @@ from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw
 from nnunetv2.utilities.label_handling.label_handling import LabelManager
-from nnunetv2.utilities.utils import get_identifiers_from_splitted_dataset_folder, \
-    get_filenames_of_train_images_and_targets
+from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
 
 
 def verify_labels(label_file: str, readerclass: Type[BaseReaderWriter], expected_labels: List[int]) -> bool:
@@ -93,7 +90,7 @@ def check_cases(image_files: List[str], label_file: str, expected_num_channels: 
         if not np.allclose(affine_image, affine_seg):
             print('WARNING: Affine is not the same for image and seg! \nAffine image: %s \nAffine seg: %s\n'
                   'Image files: %s. \nSeg file: %s.\nThis can be a problem but doesn\'t have to be. Please run '
-                  'nnUNet_plot_dataset_pngs to verify if everything is OK!\n'
+                  'nnUNetv2_plot_overlay_pngs to verify if everything is OK!\n'
                   % (affine_image, affine_seg, image_files, label_file))
 
     # sitk checks
@@ -203,8 +200,7 @@ def verify_dataset_integrity(folder: str, num_processes: int = 8) -> None:
     with multiprocessing.get_context("spawn").Pool(num_processes) as p:
         result = p.starmap(
             verify_labels,
-            zip([join(folder, 'labelsTr', i) for i in labelfiles], [reader_writer_class] * len(labelfiles),
-                [expected_labels] * len(labelfiles))
+            zip(labelfiles, [reader_writer_class] * len(labelfiles), [expected_labels] * len(labelfiles))
         )
         if not all(result):
             raise RuntimeError(
