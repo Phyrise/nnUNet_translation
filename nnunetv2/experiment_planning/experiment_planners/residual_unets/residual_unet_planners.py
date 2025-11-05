@@ -225,7 +225,7 @@ class nnUNetPlannerResUNet(ResUNetPlanner):
     """
     def __init__(self, dataset_name_or_id: Union[str, int],
                  gpu_memory_target_in_gb: float = 8,
-                 preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnResUNetPlans_debug',
+                 preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnResUNetPlans',
                  overwrite_target_spacing: Union[List[float], Tuple[float, ...]] = None,
                  suppress_transpose: bool = False):
         if gpu_memory_target_in_gb != 8:
@@ -244,7 +244,28 @@ class nnUNetPlannerResUNet(ResUNetPlanner):
         self.UNet_reference_val_2d = 135000000
         self.max_dataset_covered = 1
 
+class nnUNetPlannerResUNet_standard(nnUNetPlannerResUNet):
+    """
+    Same as nnUNetPlannerResUNet, but uses the standard decoder instead of trilinear.
+    """
+    def __init__(self, dataset_name_or_id: Union[str, int],
+                 gpu_memory_target_in_gb: float = 8,
+                 preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnResUNetPlans_standard',
+                 overwrite_target_spacing: Union[List[float], Tuple[float, ...]] = None,
+                 suppress_transpose: bool = False):
+        super().__init__(dataset_name_or_id, gpu_memory_target_in_gb,
+                         preprocessor_name, plans_name,
+                         overwrite_target_spacing, suppress_transpose)
 
+    def get_plans_for_configuration(self, spacing, median_shape, data_identifier,
+                                    approximate_n_voxels_dataset, _cache):
+        plan = super().get_plans_for_configuration(
+            spacing, median_shape, data_identifier,
+            approximate_n_voxels_dataset, _cache
+        )
+        plan['architecture']['arch_kwargs']['decoder_type'] = 'standard'
+        return plan
+    
 class nnUNetPlannerResUNetL(ResUNetPlanner):
     """
     Target is ~24 GB VRAM max -> RTX 4090, Titan RTX, Quadro 6000
@@ -276,7 +297,7 @@ class nnUNetPlannerResUNetXL(ResUNetPlanner):
     """
     def __init__(self, dataset_name_or_id: Union[str, int],
                  gpu_memory_target_in_gb: float = 40,
-                 preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnResUNetPlans_L',
+                 preprocessor_name: str = 'DefaultPreprocessor', plans_name: str = 'nnResUNetPlans_XL',
                  overwrite_target_spacing: Union[List[float], Tuple[float, ...]] = None,
                  suppress_transpose: bool = False):
         if gpu_memory_target_in_gb != 40:
@@ -308,30 +329,6 @@ if __name__ == '__main__':
                               conv_op=nn.Conv3d, kernel_sizes=3, strides=(1, 2, 2, 2, 2, 2),
                               n_blocks_per_stage=(2, 2, 2, 2, 2, 2), num_classes=1,
                               n_conv_per_stage_decoder=(1, 1, 1, 1, 1),
-                              conv_bias=True, norm_op=nn.InstanceNorm3d, norm_op_kwargs={}, dropout_op=None,
-                              nonlin=nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=True)
-    print(net.compute_conv_feature_map_size((128, 128, 128)))  # -> 558319104. The value you see above was finetuned
-
-    net = ResidualUNet(input_channels=1, n_stages=6, features_per_stage=(32, 64, 128, 256, 320, 320),
-                              conv_op=nn.Conv3d, kernel_sizes=3, strides=(1, 2, 2, 2, 2, 2),
-                              n_blocks_per_stage=(2, 2, 2, 2, 2, 2), num_classes=1,
-                              n_conv_per_stage_decoder=(2, 2, 2, 2, 2),
-                              conv_bias=True, norm_op=nn.InstanceNorm3d, norm_op_kwargs={}, dropout_op=None,
-                              nonlin=nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=True)
-    print(net.compute_conv_feature_map_size((128, 128, 128)))  # -> 558319104. The value you see above was finetuned
-
-    net = ResidualUNet(input_channels=1, n_stages=6, features_per_stage=(32, 64, 128, 256, 320, 320),
-                              conv_op=nn.Conv3d, kernel_sizes=3, strides=(1, 2, 2, 2, 2, 2),
-                              n_blocks_per_stage=(1, 3, 4, 6, 6, 6), num_classes=1,
-                              n_conv_per_stage_decoder=(2, 2, 2, 2, 2),
-                              conv_bias=True, norm_op=nn.InstanceNorm3d, norm_op_kwargs={}, dropout_op=None,
-                              nonlin=nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=True)
-    print(net.compute_conv_feature_map_size((128, 128, 128)))  # -> 558319104. The value you see above was finetuned
-
-    net = ResidualUNet(input_channels=1, n_stages=7, features_per_stage=(32, 64, 128, 256, 320, 320, 320),
-                              conv_op=nn.Conv3d, kernel_sizes=3, strides=(1, 2, 2, 2, 2, 2, 2),
-                              n_blocks_per_stage=(1, 3, 4, 6, 6, 6, 6), num_classes=1,
-                              n_conv_per_stage_decoder=(1, 1, 1, 1, 1, 1),
                               conv_bias=True, norm_op=nn.InstanceNorm3d, norm_op_kwargs={}, dropout_op=None,
                               nonlin=nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=True)
     print(net.compute_conv_feature_map_size((128, 128, 128)))  # -> 558319104. The value you see above was finetuned
