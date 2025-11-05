@@ -114,13 +114,15 @@ class ResidualEncoderUNet(nn.Module):
                                        return_skips=True, disable_default_stem=False, stem_channels=stem_channels)
         self.decoder = UNetDecoder(self.encoder, num_classes, n_conv_per_stage_decoder, deep_supervision)
 
-    # def forward(self, x):
-    #     skips = self.encoder(x)
-    #     return self.decoder(skips)
     def forward(self, x):
-        skips, encoder_feature_maps = self.encoder(x)  # Now encoder also returns the feature maps
-        decoder_feature_maps = self.decoder(skips)  # Decoder outputs
-        return encoder_feature_maps + decoder_feature_maps  # Return encoder and decoder feature maps
+        skips = self.encoder(x)
+        return skips[:-2] + self.decoder(skips)
+    
+    # def forward(self, x):
+    #     skips, encoder_feature_maps = self.encoder(x)  # Now encoder also returns the feature maps
+    #     decoder_feature_maps = self.decoder(skips)  # Decoder outputs
+    #     return encoder_feature_maps + decoder_feature_maps  # Return encoder and decoder feature maps
+    
 
     def compute_conv_feature_map_size(self, input_size):
         assert len(input_size) == convert_conv_op_to_dim(self.encoder.conv_op), "just give the image size without color/feature channels or " \

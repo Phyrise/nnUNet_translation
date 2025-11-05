@@ -1,7 +1,7 @@
 import torch, os
 from torch import nn, Tensor
 import numpy as np
-from .unet import PlainConvUNet
+from .unet import PlainConvUNet, ResidualEncoderUNet
 from .segairway import SegAirwayModel
 import torch.nn.functional as F
 import math
@@ -53,6 +53,48 @@ class AFP(nn.Module):
                 "num_classes": 7,
                 "model_type": "PlainConvUNet"
             },
+            "TotalSeg_AB_7labels": { #1*1*3mm, RIKEN
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset093_SynthRAD2025_AB_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "PlainConvUNet"
+            },
+            "TotalSeg_ABHNTH_7labels": { #1*1*3mm, RIKEN
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset092_SynthRAD2025_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "PlainConvUNet"
+            },
+            "TotalSeg_ABHNTH_20labels": { #1*1*3mm, RIKEN
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset091_SynthRAD2025_20labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 21,
+                "model_type": "PlainConvUNet"
+            },
+            "TotalSeg_ABHNTH_117labels": { #1*1*3mm, RIKEN
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset090_SynthRAD2025_117labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 118,
+                "model_type": "PlainConvUNet"
+            },
+            "TotalSeg_AB_7labels_ResEnc": { #1*1*3mm, RIKEN
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset093_SynthRAD2025_AB_7labels/nnUNetTrainer__nnUNetResEncUNetLPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "ResidualEncoderUNet"
+            },
+            "TotalSeg_AB_1x1x1_7labels": { #1*1*3mm, RIKEN
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset094_SynthRAD2025_AB_1x1x1_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
+                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 7,
+                "model_type": "PlainConvUNet"
+            },
         }
         params = model_params[net]
         kernel = params.get("kernels", [[3, 3, 3]] * 6)
@@ -63,6 +105,15 @@ class AFP(nn.Module):
                                 conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
                                 num_classes=params["num_classes"], deep_supervision=False, n_conv_per_stage=[2] * 6, 
                                 n_conv_per_stage_decoder=[2] * 5, conv_bias=True, norm_op=nn.InstanceNorm3d, 
+                                norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
+                                nonlin_kwargs={'inplace': True})
+        elif params["model_type"] == "ResidualEncoderUNet":
+            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6, 7, 8]
+            self.stages = 6
+            model = ResidualEncoderUNet(input_channels=1, n_stages=7, features_per_stage=[32, 64, 128, 256, 320, 320, 320], 
+                                conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
+                                num_classes=params["num_classes"], deep_supervision=False, n_blocks_per_stage=[2] * 7, 
+                                n_conv_per_stage_decoder=[2] * 6, conv_bias=True, norm_op=nn.InstanceNorm3d, 
                                 norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
                                 nonlin_kwargs={'inplace': True})
         elif params["model_type"] == "NaviAirway":
@@ -86,7 +137,7 @@ class AFP(nn.Module):
 
         self.L1 = nn.L1Loss()
         self.net = net
-        self.print_perceptual_layers = False
+        self.print_perceptual_layers = True
         self.debug = False
         self.mae_weight = mae_weight
 
@@ -124,8 +175,7 @@ class AFP(nn.Module):
             layer_losses.append((i, layer_loss.item()))
 
             if self.print_perceptual_layers:
-                print(f"task loss", i, " |", emb_x[i].shape)
-                print(layer_loss)
+                print(f"Layer {i}, {emb_x[i].shape} | L1: {layer_loss.item():.4f}")
 
         if self.debug:
             with open(f'losses_{self.net}.txt', 'a') as file:
@@ -139,17 +189,15 @@ class AFP(nn.Module):
                 torch.save(emb_x[i], f"embs/emb_x_{i}_ep50")
             assert(0)
 
-        mae_loss = 0
-        if self.mae_weight > 0:
+        mae_loss = 0.0
+        if self.mae_weight > 0.0:
             mae_loss = self.L1(x, y.float()) * self.mae_weight
             # mae_loss = self.L1(x.cpu(), y.cpu()) * self.mae_weight
             # mae_loss = mae_loss.cuda()
+            # with open(f'losses_airway_mae.txt', 'a') as file2:
+            #     file2.write(f"airway :  {AFP_loss:.3f}")
+            #     file2.write(f" | mae :  {mae_loss:.3f} \n")
+        print(f"AFP_total: {AFP_loss:.6f} | MAE: {mae_loss:.6f}")
 
-        # print("airway : ", AFP_loss)
-        # print("mae : ", mae_loss)
-        # print("--------")
-        with open(f'losses_airway_mae.txt', 'a') as file2:
-            file2.write(f"airway :  {AFP_loss:.3f}")
-            file2.write(f" | mae :  {mae_loss:.3f} \n")
 
         return AFP_loss + mae_loss
