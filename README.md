@@ -38,12 +38,12 @@ export nnUNet_results="/data/nnUNet/results"
 
 ## Training
 ```bash
-nnUNetv2_train DatasetY 3d_fullres 0 -tr nnUNetTrainerMRCT_mae -pl nnResUNetPlans
+nnUNetv2_train DatasetY 3d_fullres 0 -tr nnUNetTrainerMRCT_mae -pl nnResUNetPlans [optional: -pretrained_weights PATH_TO_CHECKPOINT]
 ```
 Several trainers are available :
 - L1 loss ([MRCT_mae](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_mae.py))
-- L2 loss ([MRCT_mse](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_mse.py))
 - Anatomical Feature-Prioritized loss ([MRCT_AFP](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_AFP.py)). Useful to compare features from a pre-trained segmentation network.
+- Fine-tuned AFP loss ([MRCT_AFP_ft](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_AFP_ft.py)), with reduced number of epochs and learning rate when using ```pretrained_weights```.
 Have a look at the [AFP implementation](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/loss/AFP.py) and our [accepted paper in Physics in Medicine & Biology](https://iopscience.iop.org/article/10.1088/1361-6560/adea07) 
 
 inference :
