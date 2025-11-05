@@ -15,7 +15,7 @@ def load_pretrained_weights(network, fname, verbose=False):
     nnUNetTrainer.save_checkpoint takes care of that!
 
     """
-    saved_model = torch.load(fname)
+    saved_model = torch.load(fname, weights_only=False)
     pretrained_dict = saved_model['network_weights']
 
     skip_strings_in_pretrained = [
