@@ -31,10 +31,10 @@ class nnUNetTrainerMRCT_AFP(nnUNetTrainer):
         super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
         self.enable_deep_supervision = False
         self.num_iterations_per_epoch = 250
-        self.num_epochs = 1000
-        self.decoder_type = "standard"
+        self.num_epochs = 500
         self.batch_size = 1
-        self.AFP_loss = AFP(net = "TotalSeg_ABTH_V2", mae_weight=0.3)
+        self.AFP_loss = AFP(net = "TotalSeg_AB_7labels", mae_weight=0.5)
+        self.initial_lr = 1e-3 #divided by 10 for AFP fine-tuning. 
 
     def _build_loss(self):
         loss = self.AFP_loss
