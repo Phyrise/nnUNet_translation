@@ -18,7 +18,7 @@ from batchgenerators.utilities.file_and_folder_operations import join, load_json
 
 from torch import autocast
 
-class nnUNetTrainerMRCT_AFP(nnUNetTrainer):
+class nnUNetTrainerMRCT_AFP_ft(nnUNetTrainer):
     def __init__(
         self,
         plans: dict,
@@ -31,10 +31,10 @@ class nnUNetTrainerMRCT_AFP(nnUNetTrainer):
         super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
         self.enable_deep_supervision = False
         self.num_iterations_per_epoch = 250
-        self.num_epochs = 1000 
+        self.num_epochs = 500 #reduced for fine-tuning (original: 1000)
         self.batch_size = 1
-        self.AFP_loss = AFP(net = "TotalSeg_ABHNTH_117labels", mae_weight=1.0)
-        self.initial_lr = 1e-2
+        self.AFP_loss = AFP(net = "TotalSeg_ABHNTH_117labels", mae_weight=0.5) #reduced for fine-tuning (original: 1.0)
+        self.initial_lr = 1e-3 #reduced for fine-tuning (original: 1e-2)
 
     def _build_loss(self):
         loss = self.AFP_loss
