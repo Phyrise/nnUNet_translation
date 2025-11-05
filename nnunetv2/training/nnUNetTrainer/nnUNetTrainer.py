@@ -68,7 +68,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
-                 device: torch.device = torch.device('cuda'), decoder_type:str = "standard"):
+                 device: torch.device = torch.device('cuda')):
         # From https://grugbrain.dev/. Worth a read ya big brains ;-)
 
         # apex predator of grug is complexity
@@ -90,7 +90,6 @@ class nnUNetTrainer(object):
         self.local_rank = 0 if not self.is_ddp else dist.get_rank()
 
         self.device = device
-        self.decoder_type = decoder_type
 
         # print what device we are using
         if self.is_ddp:  # implicitly it's clear that we use cuda in this case
@@ -211,7 +210,6 @@ class nnUNetTrainer(object):
                 self.num_input_channels,
                 self.label_manager.num_segmentation_heads,
                 self.enable_deep_supervision,
-                self.decoder_type
             ).to(self.device)
             # compile network for free speedup
             if self._do_i_compile():
@@ -274,8 +272,7 @@ class nnUNetTrainer(object):
                                    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
                                    num_input_channels: int,
                                    num_output_channels: int,
-                                   enable_deep_supervision: bool = True,
-                                   decoder_type:str = "standard") -> nn.Module:
+                                   enable_deep_supervision: bool = True) -> nn.Module:
         """
         This is where you build the architecture according to the plans. There is no obligation to use
         get_network_from_plans, this is just a utility we use for the nnU-Net default architectures. You can do what
@@ -302,8 +299,7 @@ class nnUNetTrainer(object):
             num_input_channels,
             1, #TODO:arthur - for now defined as 1 instead of num_output_channels
             allow_init=True,
-            deep_supervision=enable_deep_supervision,
-            decoder_type=decoder_type)
+            deep_supervision=enable_deep_supervision)
 
     def _get_deep_supervision_scales(self):
         if self.enable_deep_supervision:

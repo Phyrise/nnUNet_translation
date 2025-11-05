@@ -7,7 +7,7 @@ from batchgenerators.utilities.file_and_folder_operations import join
 
 
 def get_network_from_plans(arch_class_name, arch_kwargs, arch_kwargs_req_import, input_channels, output_channels,
-                           allow_init=True, deep_supervision: Union[bool, None] = None, decoder_type: str = "standard"):
+                           allow_init=True, deep_supervision: Union[bool, None] = None):
     network_class = arch_class_name
     architecture_kwargs = dict(**arch_kwargs)
     for ri in arch_kwargs_req_import:
@@ -30,8 +30,6 @@ def get_network_from_plans(arch_class_name, arch_kwargs, arch_kwargs_req_import,
 
     if deep_supervision is not None and 'deep_supervision' not in arch_kwargs.keys():
         arch_kwargs['deep_supervision'] = deep_supervision
-
-    architecture_kwargs['decoder_type'] = decoder_type
     
     network = nw_class(
         input_channels=input_channels,

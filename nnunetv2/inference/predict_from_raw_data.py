@@ -69,8 +69,7 @@ class nnUNetPredictor(object):
 
     def initialize_from_trained_model_folder(self, model_training_output_dir: str,
                                              use_folds: Union[Tuple[Union[int, str]], None],
-                                             checkpoint_name: str = 'checkpoint_final.pth',
-                                             decoder_type: str = "standard"): 
+                                             checkpoint_name: str = 'checkpoint_final.pth'): 
         """
         This is used when making predictions with a trained model
         """
@@ -102,17 +101,14 @@ class nnUNetPredictor(object):
         num_input_channels = determine_num_input_channels(plans_manager, configuration_manager, dataset_json)
         trainer_class = recursive_find_python_class(join(nnunetv2.__path__[0], "training", "nnUNetTrainer"),
                                                     trainer_name, 'nnunetv2.training.nnUNetTrainer')
-        if "tri" or "trilinear" in trainer_class: #quick fix. todo: put decoder_type in plans instead of trainer
-            decoder_type = "trilinear"
+        
         network = trainer_class.build_network_architecture(
             configuration_manager.network_arch_class_name,
             configuration_manager.network_arch_init_kwargs,
             configuration_manager.network_arch_init_kwargs_req_import,
             num_input_channels,
             plans_manager.get_label_manager(dataset_json).num_segmentation_heads,
-            enable_deep_supervision=False,
-            decoder_type=decoder_type
-        )
+            enable_deep_supervision=False)
 
         self.plans_manager = plans_manager
         self.configuration_manager = configuration_manager
