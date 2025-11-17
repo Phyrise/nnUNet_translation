@@ -137,7 +137,7 @@ class AFP(nn.Module):
 
         self.L1 = nn.L1Loss()
         self.net = net
-        self.print_perceptual_layers = True
+        self.print_perceptual_layers = False
         self.debug = False
         self.mae_weight = mae_weight
 
@@ -197,7 +197,7 @@ class AFP(nn.Module):
             # with open(f'losses_airway_mae.txt', 'a') as file2:
             #     file2.write(f"airway :  {AFP_loss:.3f}")
             #     file2.write(f" | mae :  {mae_loss:.3f} \n")
-        print(f"AFP_total: {AFP_loss:.6f} | MAE: {mae_loss:.6f}")
+        # print(f"AFP_total: {AFP_loss:.6f} | MAE: {mae_loss:.6f}")
 
 
         return AFP_loss + mae_loss
