@@ -28,7 +28,8 @@ class ResUNetPlanner(ExperimentPlanner):
         self.UNet_reference_val_3d = 680000000 #default: 680000000, finetuned more to include decoder
         self.UNet_reference_val_2d = 135000000
         self.UNet_blocks_per_stage_encoder = (1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)
-        self.UNet_blocks_per_stage_decoder = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+        # self.UNet_blocks_per_stage_decoder = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1) #default 
+        self.UNet_blocks_per_stage_decoder = (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2) #for synthesis, empirically better than default (tested on SynthRAD2025)
 
     def generate_data_identifier(self, configuration_name: str) -> str:
         """
@@ -240,7 +241,7 @@ class nnUNetPlannerResUNet(ResUNetPlanner):
         self.UNet_reference_val_corresp_GB = 8
 
         # this is supposed to give the same GPU memory requirement as the default nnU-Net
-        self.UNet_reference_val_3d = 1000000000 #arthur: manually finetuned to get same patch as default UNet 
+        self.UNet_reference_val_3d = 900000000 #arthur: manually finetuned to get same patch as default UNet 
         self.UNet_reference_val_2d = 135000000
         self.max_dataset_covered = 1
 
