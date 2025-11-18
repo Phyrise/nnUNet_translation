@@ -30,13 +30,13 @@ class AFP(nn.Module):
                 "model_type": "PlainConvUNet"
             },
             "Imene8": { #96x160x160
-                "weights_path": "/data2/alonguefosse/checkpoints/nnUNet_Imene8_best.pth", # 5 stage
+                "weights_path": "/export/work/users/arthur/checkpoints/nnUNet_Imene8_best.pth", # 5 stage
                 "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
                 "num_classes": 9,
                 "model_type": "PlainConvUNet",
             },
             "NaviAirway": {
-                "weights_path" : "/data2/alonguefosse/checkpoints/naviairway_semi_supervise.pkl",
+                "weights_path" : "/export/work/users/arthur/projects/NaviAirway/model_para/checkpoint_semi_supervise_learning.pkl",
                 "model_type": "NaviAirway"
             },
             "TotalSeg_HN_V2": { #1*1*3mm
@@ -128,8 +128,7 @@ class AFP(nn.Module):
         model.load_state_dict(model_state_dict, strict=False)
         print(f"AFP, loaded {net} : {params['weights_path']}")
         model.eval()
-        
-
+  
         for param in model.parameters(): 
             param.requires_grad = False
         self.model = model    
@@ -138,6 +137,7 @@ class AFP(nn.Module):
         self.L1 = nn.L1Loss()
         self.net = net
         self.print_perceptual_layers = False
+        self.print_loss = True
         self.debug = False
         self.mae_weight = mae_weight
 
@@ -197,7 +197,8 @@ class AFP(nn.Module):
             # with open(f'losses_airway_mae.txt', 'a') as file2:
             #     file2.write(f"airway :  {AFP_loss:.3f}")
             #     file2.write(f" | mae :  {mae_loss:.3f} \n")
-        # print(f"AFP_total: {AFP_loss:.6f} | MAE: {mae_loss:.6f}")
+        if self.print_loss:
+            print(f"AFP_total: {AFP_loss:.5f} | MAE: {mae_loss:.5f}")
 
 
         return AFP_loss + mae_loss
