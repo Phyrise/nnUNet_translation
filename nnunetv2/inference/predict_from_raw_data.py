@@ -54,7 +54,7 @@ class nnUNetPredictor(object):
 
         self.tile_step_size = tile_step_size
         # self.tile_step_size = 0.5
-        # use_mirroring = False
+        use_mirroring = False
         print("tile : ", self.tile_step_size, ", mirror=", use_mirroring)
         self.use_gaussian = use_gaussian
         self.use_mirroring = use_mirroring
@@ -564,12 +564,49 @@ class nnUNetPredictor(object):
             workon = workon.to(self.device, non_blocking=False)
             prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
             patch = prediction.detach().cpu()[0]
-            # print(torch.min(patch), torch.max(patch), patch.shape)
-            # patch+= (3*np.random.rand(*patch.shape) -1) #debug with noise
             vol[sl] += patch
             n_predictions[sl[1:]] += 1
         vol /= n_predictions
         return vol
+    
+    def rec_center(self, slicers, data, center_ratio=0.1):
+        print("rec_mean with center-based approach | UNDER CONSTRUCTION")
+        device = self.device
+        with torch.no_grad():
+            data = data.to(device, non_blocking=True)
+
+            ps = data.shape[1:]      # full volume shape
+            vol = torch.zeros_like(data, dtype=torch.half, device=device)
+            n_predictions = torch.zeros(ps, dtype=torch.half, device=device)
+
+            # compute center crop
+            patch_size = self.configuration_manager.patch_size
+            cz = int(patch_size[0] * center_ratio)
+            cy = int(patch_size[1] * center_ratio)
+            cx = int(patch_size[2] * center_ratio)
+            inner = (
+                slice(cz, patch_size[0] - cz),
+                slice(cy, patch_size[1] - cy),
+                slice(cx, patch_size[2] - cx)
+            )
+
+            for sl in tqdm(slicers):
+                workon = data[sl].unsqueeze(0)
+                pred = self._internal_maybe_mirror_and_predict(workon)[0]
+                pred_center = pred[0][inner]
+                target_sl = (
+                    sl[0],  # channel dimension
+                    slice(sl[1].start + cz, sl[1].stop - cz),
+                    slice(sl[2].start + cy, sl[2].stop - cy),
+                    slice(sl[3].start + cx, sl[3].stop - cx),
+                )
+
+                vol[target_sl] += pred_center
+                n_predictions[target_sl[1:]] += 1
+
+            vol /= n_predictions
+            return vol
+
 
     def rec_median(self, slicers, data, max_layers=25):     
         # TODO: Reimplement more efficiently (currently RAM-heavy, naive for-loops; constrained by max_layers)
@@ -650,6 +687,9 @@ class nnUNetPredictor(object):
             if reconstruction_mode == "mean":
                 print("Reconstruction: MEAN")
                 predicted_logits = self.rec_mean(slicers, data)
+            if reconstruction_mode == "center_mean":
+                print("Reconstruction: CENTER MEAN")
+                predicted_logits = self.rec_center(slicers, data)
             elif reconstruction_mode == "median":
                 print("Reconstruction: MEDIAN")
                 predicted_logits = self.rec_median(slicers, data)
