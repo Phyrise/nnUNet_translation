@@ -687,7 +687,7 @@ class nnUNetPredictor(object):
             if reconstruction_mode == "mean":
                 print("Reconstruction: MEAN")
                 predicted_logits = self.rec_mean(slicers, data)
-            if reconstruction_mode == "center_mean":
+            elif reconstruction_mode == "center_mean":
                 print("Reconstruction: CENTER MEAN")
                 predicted_logits = self.rec_center(slicers, data)
             elif reconstruction_mode == "median":
@@ -808,7 +808,7 @@ def predict_entry_point_modelfolder():
     parser.add_argument('--disable_progress_bar', action='store_true', required=False, default=False,
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
-    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'median'],
+    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'center_mean', 'median',],
                         help='Method of reconstruction: mean or median. Default is mean.')
 
 
@@ -920,7 +920,7 @@ def predict_entry_point():
     parser.add_argument('--disable_progress_bar', action='store_true', required=False, default=False,
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
-    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'median'],
+    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'center_mean', 'median',],
                         help='Method of reconstruction: mean or median. Default is mean.')
 
 
