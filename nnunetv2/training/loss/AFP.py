@@ -16,18 +16,18 @@ class AFP(nn.Module):
                 "num_classes": 3,
                 "model_type": "PlainConvUNet"
             },
-            "TotalSeg_V2": { #patch_size : [128 128 128], 0.6mm
-                "weights_path": "/data2/alonguefosse/checkpoints/TotalSeg_V2.pth", # 5 stage
+            "TotalSeg_V2": { #patch_size : [128 128 128], 0.6mm, fused 7 labels
+                "weights_path": "/export/work/users/arthur/checkpoints/TotalSeg_V2.pth", # 5 stage
                 "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
                 "num_classes": 8,
                 "model_type": "PlainConvUNet"
             },
-            "TotalSeg_pelvis_V2": { #0.6mm
-                "weights_path": "/data2/alonguefosse/checkpoints/TotalSeg_pelvis_V2.pth", # 5 stage
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 38,
-                "model_type": "PlainConvUNet"
+            "TotalSeg117": { #patch_size : [128 128 128], 0.6mm, 117 labels kept
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset096_Lungs_117labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
+                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 118,
+                "model_type": "PlainConvUNet_5"
             },
             "Imene8": { #96x160x160
                 "weights_path": "/export/work/users/arthur/checkpoints/nnUNet_Imene8_best.pth", # 5 stage
@@ -39,20 +39,6 @@ class AFP(nn.Module):
                 "weights_path" : "/export/work/users/arthur/projects/NaviAirway/model_para/checkpoint_semi_supervise_learning.pkl",
                 "model_type": "NaviAirway"
             },
-            "TotalSeg_HN_V2": { #1*1*3mm
-                "weights_path": "/home/phy/Documents/nnUNet/results/Dataset880_TotalSegV2_HN/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 7,
-                "model_type": "PlainConvUNet"
-            },
-            "TotalSeg_ABTH_V2": { #1*1*3mm
-                "weights_path": "/home/phy/Documents/nnUNet/results/Dataset881_TotalSegV2_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 7,
-                "model_type": "PlainConvUNet"
-            },
             "TotalSeg_AB_7labels": { #1*1*3mm, RIKEN
                 "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset093_SynthRAD2025_AB_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
                 "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
@@ -60,11 +46,18 @@ class AFP(nn.Module):
                 "num_classes": 7,
                 "model_type": "PlainConvUNet"
             },
-            "TotalSeg_ABHNTH_7labels": { #1*1*3mm, RIKEN
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset092_SynthRAD2025_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 7,
+            "Navi_1label": { #O.6*0.6*0.6mm, RIKEN, trained on CHU using Navi labels 
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset095_Lungs_Airways/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
+                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 2,
+                "model_type": "PlainConvUNet"
+            },
+            "Navi_2labels": { #O.6*0.6*0.6mm, RIKEN, trained on CHU using Navi labels split (1:trachea, 2:airways)
+                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset097_Lungs_Airways2/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
+                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
+                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
+                "num_classes": 3,
                 "model_type": "PlainConvUNet"
             },
             "TotalSeg_ABHNTH_20labels": { #1*1*3mm, RIKEN
@@ -107,6 +100,15 @@ class AFP(nn.Module):
                                 n_conv_per_stage_decoder=[2] * 5, conv_bias=True, norm_op=nn.InstanceNorm3d, 
                                 norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
                                 nonlin_kwargs={'inplace': True})
+        elif params["model_type"] == "PlainConvUNet_5":
+            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6]
+            self.stages = 4
+            model = PlainConvUNet(input_channels=1, n_stages=5, features_per_stage=[32, 64, 128, 256, 320], 
+                                conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
+                                num_classes=params["num_classes"], deep_supervision=False, n_conv_per_stage=[2] * 5, 
+                                n_conv_per_stage_decoder=[2] * 4, conv_bias=True, norm_op=nn.InstanceNorm3d, 
+                                norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
+                                nonlin_kwargs={'inplace': True})
         elif params["model_type"] == "ResidualEncoderUNet":
             self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6, 7, 8]
             self.stages = 6
@@ -126,7 +128,7 @@ class AFP(nn.Module):
         checkpoint = torch.load(params["weights_path"], map_location='cuda', weights_only = False)
         model_state_dict = checkpoint.get('state_dict', checkpoint.get('network_weights', checkpoint.get('model_state_dict')))
         model.load_state_dict(model_state_dict, strict=False)
-        print(f"AFP, loaded {net} : {params['weights_path']}")
+        print(f"AFP, layers {layers}, loaded {net} : {params['weights_path']}")
         model.eval()
   
         for param in model.parameters(): 
@@ -137,7 +139,7 @@ class AFP(nn.Module):
         self.L1 = nn.L1Loss()
         self.net = net
         self.print_perceptual_layers = False
-        self.print_loss = True
+        self.print_loss = False
         self.debug = False
         self.mae_weight = mae_weight
 

@@ -97,7 +97,6 @@ def convert_predicted_image_to_original_shape(predicted_image: Union[torch.Tenso
         predicted_resampled = predicted_resampled.cpu().numpy() 
 
     predicted_resampled = predicted_resampled[0] #arthur : hardcoded first channel
-    # sitk.WriteImage(sitk.GetImageFromArray(predicted_resampled.astype(np.float32)), "test_tanh.nii.gz")
     print(predicted_resampled.shape, np.min(predicted_resampled), np.max(predicted_resampled), predicted_resampled.dtype)
 
     # Put the image back into its original bounding box (revert cropping)
