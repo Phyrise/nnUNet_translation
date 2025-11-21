@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import math
 
 class AFP(nn.Module):
-    def __init__(self, net: str = "", layers=[], mae_weight=0.0):
+    def __init__(self, net: str = "", layers=[], mae_weight=0.0, normalize_before_L1=False):
         super().__init__()
         model_params = {
             "TotalSeg_vessels": { #1.5mm
@@ -141,7 +141,9 @@ class AFP(nn.Module):
         self.print_perceptual_layers = False
         self.print_loss = False
         self.debug = False
+
         self.mae_weight = mae_weight
+        self.normalize_before_L1 = normalize_before_L1
 
     def center_pad_to_multiple_of_2pow(self, x):
         factor = 2 ** self.stages
@@ -172,6 +174,9 @@ class AFP(nn.Module):
         AFP_loss = 0
         layer_losses = []
         for i in self.layers:
+            if self.normalize_before_L1:
+                emb_x[i] = F.instance_norm(emb_x[i])
+                emb_y[i] = F.instance_norm(emb_y[i])
             layer_loss = self.L1(emb_x[i], emb_y[i].detach())
             AFP_loss += layer_loss
             layer_losses.append((i, layer_loss.item()))
