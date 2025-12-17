@@ -110,6 +110,27 @@ class nnUNetDataset(object):
 
         return data, seg, entry['properties']
 
+    def load_mask(self, key):
+        entry = self[key]
+        
+        if 'open_mask_file' in entry.keys():
+            mask = entry['open_mask_file']
+        
+        elif isfile(entry['data_file'][:-4] + "_mask.npy"):
+            mask_path = entry['data_file'][:-4] + "_mask.npy"
+            mask = np.load(mask_path, 'r')
+            
+            if self.keep_files_open:
+                self.dataset[key]['open_mask_file'] = mask
+        
+        else:
+            mask = np.load(entry['data_file'])['mask']
+            
+            if self.keep_files_open:
+                self.dataset[key]['open_mask_file'] = mask
+        
+        return mask
+
 
 if __name__ == '__main__':
     # this is a mini test. Todo: We can move this to tests in the future (requires simulated dataset)

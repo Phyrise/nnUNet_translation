@@ -92,3 +92,38 @@ class nnUNetDataLoader3D_MRCT(nnUNetDataLoaderBase):
             seg_all[j] = np.pad(seg, ((0, 0), *padding), 'constant', constant_values=0)
         return {'data': data_all, 'seg': seg_all, 'properties': case_properties, 'keys': selected_keys}
 
+
+class nnUNetDataLoader3D_MRCT_mask(nnUNetDataLoaderBase):
+    def generate_train_batch(self):
+        selected_keys = self.get_indices()
+        # preallocate memory for data and seg
+        data_all = np.zeros(self.data_shape, dtype=np.float32)
+        seg_all = np.zeros(self.seg_shape, dtype=np.float32)
+        mask_all = np.zeros(self.seg_shape, dtype=np.int16)
+
+        case_properties = []
+
+        for j, i in enumerate(selected_keys):
+            force_fg = self.get_do_oversample(j)
+
+            data, seg, properties = self._data.load_case(i)
+            mask = self._data.load_mask(i)
+
+            case_properties.append(properties)
+            shape = data.shape[1:]
+            dim = len(shape)
+            bbox_lbs, bbox_ubs = self.get_bbox(shape, force_fg, properties['class_locations'])
+            valid_bbox_lbs = [max(0, bbox_lbs[i]) for i in range(dim)]
+            valid_bbox_ubs = [min(shape[i], bbox_ubs[i]) for i in range(dim)]
+
+            this_slice = tuple([slice(0, data.shape[0])] + [slice(i, j) for i, j in zip(valid_bbox_lbs, valid_bbox_ubs)])
+            data = data[this_slice]
+            seg = seg[this_slice]
+            mask = mask[this_slice]
+
+            padding = [(-min(0, bbox_lbs[i]), max(bbox_ubs[i] - shape[i], 0)) for i in range(dim)]
+            data_all[j] = np.pad(data, ((0, 0), *padding), 'constant', constant_values=0)
+            seg_all[j] = np.pad(seg, ((0, 0), *padding), 'constant', constant_values=0)
+            mask_all[j] = np.pad(mask, ((0, 0), *padding), 'constant', constant_values=-1)
+
+        return {'data': data_all, 'seg': seg_all, 'mask' : mask_all, 'properties': case_properties, 'keys': selected_keys}
