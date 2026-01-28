@@ -35,6 +35,13 @@ class SimpleITKIO(BaseReaderWriter):
         spacings_for_nnunet = []
         for f in image_fnames:
             itk_image = sitk.ReadImage(f)
+            ######### FIX FOR INFERENCE #########
+            curr_orient = sitk.DICOMOrientImageFilter_GetOrientationFromDirectionCosines(
+                itk_image.GetDirection()
+            )
+            if curr_orient != "LPS":
+                itk_image = sitk.DICOMOrient(itk_image, "LPS")
+            ######### 
             spacings.append(itk_image.GetSpacing())
             origins.append(itk_image.GetOrigin())
             directions.append(itk_image.GetDirection())
