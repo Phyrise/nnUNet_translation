@@ -1,0 +1,96 @@
+# sct_unet full_v3_no_amp — 시도 4: AMP off + lr=1e-5 SGD
+# 작성: 2026-06-01 / amed plan unet0601.md § 6 (NaN 진단 시도 4)
+# full_v3_paired_fix.yaml 의 amp=true → false 만 변경, 나머지 동일
+# 가설: SSIM 의 fp16 variance underflow 가 NaN 원인 → fp32 학습으로 검증
+
+data:
+  cbct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset050_TrainHN_Input/imagesTr"
+  ct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset051_TrainHN_Target/imagesTr"
+  val_cases:
+    - "2HNA026"
+    - "2HNA033"
+    - "2HNA034"
+    - "2HNA038"
+    - "2HNA047"
+    - "2HNA096"
+    - "2HNA098"
+    - "2HNA100"
+    - "2HNA102"
+    - "2HNA104"
+    - "2HNA110"
+    - "2HNB013"
+    - "2HNB054"
+    - "2HNB061"
+    - "2HNB064"
+    - "2HNB071"
+    - "2HNB103"
+    - "2HNB108"
+    - "2HNC017"
+    - "2HNC020"
+    - "2HNC025"
+    - "2HNC030"
+    - "2HNC034"
+    - "2HNC036"
+    - "2HNC042"
+    - "2HNC043"
+    - "2HNC051"
+    - "2HNC060"
+    - "2HNC061"
+    - "2HNC062"
+    - "2HNC063"
+    - "2HNC084"
+    - "2HNC086"
+    - "2HNC087"
+    - "2HNC094"
+    - "2HNC101"
+    - "2HNC117"
+    - "2HNC119"
+    - "2HNE001"
+    - "2HNE006"
+  num_workers: 4
+
+normalization:
+  ct_clip_min: -1024
+  ct_clip_max: 3071
+  cbct_air_threshold: -900
+
+slicing:
+  num_adjacent: 3
+  patch_size: [256, 256]
+
+augmentation:
+  rand_flip_prob: 0.5
+  rand_noise_prob: 0.2
+  rand_noise_std: 0.05
+
+model:
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  dropout: 0.0
+
+training:
+  batch_size: 8
+  num_epochs: 100
+  lr: 1.0e-5
+  weight_decay: 1.0e-5
+  optimizer: "sgd"
+  momentum: 0.99
+  nesterov: true
+  loss: "l1_ssim"
+  ssim_weight: 0.1
+  # 시도 4 핵심 변경: AMP off (fp32 학습)
+  # 가설: SSIM variance 계산의 fp16 underflow 가 NaN 원인
+  amp: false
+  seed: 42
+  out_dir: "outputs/full_v3_no_amp"
+  log_every: 50
+  val_every: 1
+  save_every: 50
+
+inference:
+  sw_overlap: 0.5
+  sw_batch_size: 4

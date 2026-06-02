@@ -1,0 +1,104 @@
+# sct_unet full_v3_paired_fix — 6-variable 통합 개선
+# 작성: 2026-05-27 / amed plan unet0601.md § 0 참조
+# multi-variable 변경: 효과 분리는 후속 ablation (Exp-N-a/b) 필요
+
+data:
+  cbct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset050_TrainHN_Input/imagesTr"
+  ct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset051_TrainHN_Target/imagesTr"
+  # nnUNet fold_0 의 val split 과 동일 — 동일 평가 조건 유지
+  val_cases:
+    - "2HNA026"
+    - "2HNA033"
+    - "2HNA034"
+    - "2HNA038"
+    - "2HNA047"
+    - "2HNA096"
+    - "2HNA098"
+    - "2HNA100"
+    - "2HNA102"
+    - "2HNA104"
+    - "2HNA110"
+    - "2HNB013"
+    - "2HNB054"
+    - "2HNB061"
+    - "2HNB064"
+    - "2HNB071"
+    - "2HNB103"
+    - "2HNB108"
+    - "2HNC017"
+    - "2HNC020"
+    - "2HNC025"
+    - "2HNC030"
+    - "2HNC034"
+    - "2HNC036"
+    - "2HNC042"
+    - "2HNC043"
+    - "2HNC051"
+    - "2HNC060"
+    - "2HNC061"
+    - "2HNC062"
+    - "2HNC063"
+    - "2HNC084"
+    - "2HNC086"
+    - "2HNC087"
+    - "2HNC094"
+    - "2HNC101"
+    - "2HNC117"
+    - "2HNC119"
+    - "2HNE001"
+    - "2HNE006"
+  num_workers: 4
+
+normalization:
+  # C2: CT clip 범위 [-1024, 3071] 확장 (H-02 P1, full_v2 와 동일)
+  # 근거 [M] — § 8 ADDENDUM HN MAE 87.9→43.4, § 15.1.1 3 region 일관
+  ct_clip_min: -1024
+  ct_clip_max: 3071
+  cbct_air_threshold: -900
+
+slicing:
+  num_adjacent: 3
+  patch_size: [256, 256]
+
+augmentation:
+  # C6: dead config 의 affine/rotate/scale 키 제거 (data.py 의 _augment 가 미구현)
+  # affine augmentation 도입은 별도 작업 (H-06 P2, 본 config 범위 밖)
+  rand_flip_prob: 0.5
+  rand_noise_prob: 0.2
+  rand_noise_std: 0.05
+
+model:
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  dropout: 0.0
+
+training:
+  batch_size: 8
+  num_epochs: 100
+  # C3: lr sweep {1e-3, 5e-4, 1e-4, 5e-5} 의 default = 1e-4 (sweep 의 중간값)
+  # scripts/train_sweep_lr.sh 가 --override 로 다른 lr 적용
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  # C5: Adam → SGD(momentum=0.99, nesterov=True)
+  # 근거 [M-analog] — § 14/15 의 nnUNet 측 동일 optimizer 가 산출한 결과
+  # 단 sct_unet 의 batch=8 (2D) → lr=1e-2 (nnUNet default) 부적합, sweep range {1e-3~5e-5} 적절
+  optimizer: "sgd"
+  momentum: 0.99
+  nesterov: true
+  # C4: L1 + SSIM weight 0.1 (H-10 sweep 의 단일 point)
+  loss: "l1_ssim"
+  ssim_weight: 0.1
+  amp: true
+  seed: 42
+  out_dir: "outputs/full_v3_paired_fix"
+  log_every: 50
+  val_every: 1
+  save_every: 50
+
+inference:
+  sw_overlap: 0.5
+  sw_batch_size: 4

@@ -1,0 +1,98 @@
+# sCT U-Net default config
+# 경로/하이퍼파라미터를 한 곳에서 관리. CLI 인자로 덮어쓰기 가능.
+
+data:
+  # CBCT/CT 디렉토리 (imagesTr 안에 <case>_0000.nii.gz)
+  cbct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset050_TrainHN_Input/imagesTr"
+  ct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset051_TrainHN_Target/imagesTr"
+  # nnUNet fold_0 의 val split 과 동일하게 — 동일 평가 조건 유지
+  val_cases:
+    - "2HNA026"
+    - "2HNA033"
+    - "2HNA034"
+    - "2HNA038"
+    - "2HNA047"
+    - "2HNA096"
+    - "2HNA098"
+    - "2HNA100"
+    - "2HNA102"
+    - "2HNA104"
+    - "2HNA110"
+    - "2HNB013"
+    - "2HNB054"
+    - "2HNB061"
+    - "2HNB064"
+    - "2HNB071"
+    - "2HNB103"
+    - "2HNB108"
+    - "2HNC017"
+    - "2HNC020"
+    - "2HNC025"
+    - "2HNC030"
+    - "2HNC034"
+    - "2HNC036"
+    - "2HNC042"
+    - "2HNC043"
+    - "2HNC051"
+    - "2HNC060"
+    - "2HNC061"
+    - "2HNC062"
+    - "2HNC063"
+    - "2HNC084"
+    - "2HNC086"
+    - "2HNC087"
+    - "2HNC094"
+    - "2HNC101"
+    - "2HNC117"
+    - "2HNC119"
+    - "2HNE001"
+    - "2HNE006"
+  num_workers: 4
+
+normalization:
+  # CT HU 클립 후 [-1, 1] 선형 매핑
+  ct_clip_min: -1000
+  ct_clip_max: 2000
+  # CBCT는 per-volume z-score (foreground=value > air_threshold)
+  cbct_air_threshold: -900
+
+slicing:
+  # 2.5D: 인접 슬라이스 개수 (3 = z-1, z, z+1 → 3채널)
+  num_adjacent: 3
+  # 학습 시 random crop, 추론 시 sliding window
+  patch_size: [256, 256]
+
+augmentation:
+  rand_flip_prob: 0.5
+  rand_affine_prob: 0.3
+  rand_rotate_deg: 10
+  rand_scale: 0.1
+  rand_noise_prob: 0.2
+  rand_noise_std: 0.05
+
+model:
+  # MONAI UNet
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  dropout: 0.0
+
+training:
+  batch_size: 8
+  num_epochs: 200
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  loss: "l1"          # "l1" or "l1_ssim"
+  ssim_weight: 0.1
+  amp: true
+  seed: 42
+  out_dir: "outputs/full_0429"
+  log_every: 20
+  val_every: 1
+
+inference:
+  sw_overlap: 0.5
+  sw_batch_size: 4

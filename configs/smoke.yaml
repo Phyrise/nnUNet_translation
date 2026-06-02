@@ -1,0 +1,50 @@
+data:
+  cbct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset050_TrainHN_Input/imagesTr"
+  ct_dir: "C:/Users/USER/Desktop/dev/nnUNet_translation/raw/Dataset051_TrainHN_Target/imagesTr"
+  val_cases:
+    - "2HNA026"
+    - "2HNA033"
+  num_workers: 2
+
+normalization:
+  ct_clip_min: -1024
+  ct_clip_max: 3071
+  cbct_air_threshold: -900
+
+slicing:
+  num_adjacent: 3
+  patch_size: [256, 256]
+
+augmentation:
+  rand_flip_prob: 0.5
+  rand_affine_prob: 0.0
+  rand_rotate_deg: 0
+  rand_scale: 0.0
+  rand_noise_prob: 0.2
+  rand_noise_std: 0.05
+
+model:
+  spatial_dims: 2
+  in_channels: 3
+  out_channels: 1
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  dropout: 0.0
+
+training:
+  batch_size: 8
+  num_epochs: 1
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  loss: "l1"
+  ssim_weight: 0.1
+  amp: true
+  seed: 42
+  out_dir: "outputs/smoke"
+  log_every: 50
+  val_every: 1
+
+inference:
+  sw_overlap: 0.5
+  sw_batch_size: 4

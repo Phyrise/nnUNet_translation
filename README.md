@@ -1,57 +1,98 @@
-# nnUNet_translation 
-For further discussion, please contact me by e-mail : arthur.longuefosse [at] gmail.com 
+# sCT U-Net (MONAI 2.5D)
 
-Please cite our workshop paper when using nnU-Net_translation :
+CBCT → sCT (synthetic CT) 합성용 2.5D U-Net. 분할용 U-Net을 회귀(image-to-image)로 개조한 독립 fork. nnUNet 의존성 없음.
 
-    Longuefosse, A., Bot, E. L., De Senneville, B. D., Giraud, R., Mansencal, B., Coupé, P., ... & Baldacci, F. (2024, October). 
-    Adapted nnU-Net: A Robust Baseline for Cross-Modality Synthesis and Medical Image Inpainting. In International Workshop on Simulation and Synthesis in Medical Imaging (pp. 24-33). Cham: Springer Nature Switzerland.
+자세한 설계와 진행 상황은 [PLAN.md](PLAN.md) 참고.
 
-Along with the original nnUNet paper :
+## 1. 환경 준비 (GPU 머신)
 
-    Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). nnU-Net: a self-configuring 
-    method for deep learning-based biomedical image segmentation. Nature methods, 18(2), 203-211.
-    
-## Installation
 ```bash
-# Please use a dedicated environment to avoid conflicts with
-# the original nnUNet implementation (e.g., venv, conda)
-git clone https://github.com/Phyrise/nnUNet_translation 
-cd nnUNet_translation
-pip install -e .
-```
-The `pip install` command will also install the modified [batchgenerators](https://github.com/Phyrise/batchgenerators_translation) and [dynamic-network-architectures](https://github.com/Phyrise/dynamic-network-architectures_translation) repos.
+# (권장) 새 conda env
+conda create -n sct python=3.11 -y
+conda activate sct
 
-## Preprocessing steps
-Please check the `notebooks/` files for the preprocessing.
+# PyTorch — CUDA 버전에 맞춰 설치
+# 예: CUDA 12.1
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
-### ISBI 2026 update: we recommend using Residual UNet as the default Plans:
+# 나머지 의존성
+pip install -r requirements.txt
 ```
-nnUNetv2_plan_experiment -d 101 -c 3d_fullres -pl nnUNetPlannerResUNet
+
+CUDA 인식 확인:
+```python
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
-By default, it integrates trilinear interpolation in the decoder part, instead of transposed convolutions. Standard deconvolution can still be used with ```nnUNetPlannerResUNet_standard```
-## Set environment variables
+
+## 2. 데이터 경로 확인
+
+[`configs/default.yaml`](configs/default.yaml)의 `data.cbct_dir`, `data.ct_dir`만 GPU 머신 경로에 맞게 수정. 데이터 포맷:
+
+```
+<cbct_dir>/Case_001_0000.nii.gz   ← CBCT
+<ct_dir>/Case_001_0000.nii.gz     ← CT (같은 좌표계, 정합 완료)
+```
+
+기본 split: `Case_012/013/014` 가 val, 나머지가 train.
+
+## 3. 학습
+
 ```bash
-export nnUNet_raw="/data/nnUNet/raw"
-export nnUNet_preprocessed="/data/nnUNet/preprocessed"
-export nnUNet_results="/data/nnUNet/results"
+# sct_unet/ 루트에서
+python -m src.train --config configs/default.yaml
+# 또는
+./scripts/train.sh
 ```
 
-## Training
+산출물 (`outputs/`):
+- `best.pth`, `last.pth` — 체크포인트
+- `train.log` — 텍스트 로그
+- `tb/` — TensorBoard (`tensorboard --logdir outputs/tb`)
+
+## 4. 추론
+
 ```bash
-nnUNetv2_train DatasetY 3d_fullres 0 -tr nnUNetTrainerMRCT_mae -pl nnResUNetPlans [optional: -pretrained_weights PATH_TO_CHECKPOINT]
-```
-Several trainers are available :
-- L1 loss ([MRCT_mae](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_mae.py))
-- Anatomical Feature-Prioritized loss ([MRCT_AFP](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_AFP.py)). Useful to compare features from a pre-trained segmentation network.
-- Fine-tuned AFP loss ([MRCT_AFP_ft](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/nnUNetTrainer/variants/network_architecture/nnUNetTrainerMRCT_AFP_ft.py)), with reduced number of epochs and learning rate when using ```pretrained_weights```.
-Have a look at the [AFP implementation](https://github.com/Phyrise/nnUNet_translation/blob/master/nnunetv2/training/loss/AFP.py) and our [accepted paper in Physics in Medicine & Biology](https://iopscience.iop.org/article/10.1088/1361-6560/adea07) 
-
-inference :
-```bash
-nnUNetv2_predict -d DatasetY -i INPUT -o OUTPUT -c 3d_fullres -p nnResUNetPlans -tr nnUNetTrainerMRCT_mae -f FOLD [optional : -chk checkpoint_best.pth -step_size 0.3 --rec (mean,median)]
+python -m src.infer --config configs/default.yaml \
+    --ckpt outputs/best.pth \
+    --input /path/to/CBCT.nii.gz \
+    --output /path/to/sCT.nii.gz
 ```
 
-- A smaller step_size (default: 0.5, recommended: 0.3) at inference can reduce some artifacts on images.
-- --rec allows selecting the reconstruction method for overlapping patches (```mean```or ```median```).
-The ```median``` is still experimental and currently RAM-intensive.
+출력: int16 HU 단위 NIfTI, 입력의 affine/header 보존.
 
+## 5. 스모크 테스트 (1 epoch만)
+
+`configs/default.yaml`을 임시로:
+```yaml
+training:
+  num_epochs: 1
+  batch_size: 2
+```
+로 바꾸고 학습 → 추론까지 끝까지 도는지 확인 후 원복.
+
+## 6. 디렉토리 구조
+
+```
+sct_unet/
+├── PLAN.md                  설계/진행상황
+├── README.md                이 문서
+├── requirements.txt
+├── configs/default.yaml
+├── src/
+│   ├── data.py              2.5D paired NIfTI dataset
+│   ├── model.py             MONAI UNet 래퍼
+│   ├── losses.py            L1 / L1+SSIM
+│   ├── utils.py             정규화/시드/로거
+│   ├── train.py
+│   └── infer.py
+├── scripts/                 train.sh/.bat, infer.sh/.bat
+└── outputs/                 (런타임 생성)
+```
+
+## 7. 분할 U-Net과의 차이 (개조 포인트)
+
+1. `out_channels=1`, softmax/argmax 제거 — 연속값(HU) 회귀
+2. Loss: CE/Dice → **L1** (옵션 L1+SSIM)
+3. Dataset: (image, mask) → **(CBCT, CT)** paired NIfTI
+4. CT [-1000, 2000] HU → [-1, 1] 학습용, 출력 시 HU로 복원
+5. 추론: 슬라이스별 sliding window → 볼륨 재조립, affine 보존
