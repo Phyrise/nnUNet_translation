@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\USER\Desktop\dev\sct_unet\scripts\eval_phase2_test14.py", line 47, in <module>
+    from src.eval.metrics import evaluate_volume
+ModuleNotFoundError: No module named 'src.eval'

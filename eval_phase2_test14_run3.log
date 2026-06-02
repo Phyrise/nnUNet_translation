@@ -1,0 +1,44 @@
+=== sct_unet 시도 4 best.pth → phase2 test 14 case 평가 ===
+  device: cpu (강제 CPU)
+  cfg: C:\Users\USER\Desktop\dev\sct_unet\configs\full_v3_no_amp.yaml
+  ckpt: C:\Users\USER\Desktop\dev\sct_unet\outputs\full_v3_no_amp\best.pth
+  out: C:\Users\USER\Desktop\dev\sct_unet\outputs\eval_phase2_test14
+  cases: ['2HNE004', '2HNE024', '2HNE030', '2HNE034', '2HNE038', '2HNE043', '2HNE054', '2HNE059', '2HNE060', '2HNE070', '2HNE090', '2HNE092', '2HNE097', '2HNE108']
+
+  ckpt epoch=97, best_mae=62.43685631543372
+C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\inferers\utils.py:226: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\python_variable_indexing.cpp:353.)
+  win_data = torch.cat([inputs[win_slice] for win_slice in unravel_slice]).to(sw_device)
+C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\inferers\utils.py:370: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\python_variable_indexing.cpp:353.)
+  out[idx_zm] += p
+[ 1/14] 2HNE004: MAE_w=171.91 MAE_soft=150.64 MAE_bone=282.91 SSIM_soft=0.8373 SSIM_bone=0.8864 PSNR=23.99  (2.6s)  [OVERLAP]
+[ 2/14] 2HNE024: MAE_w=262.71 MAE_soft=243.78 MAE_bone=456.90 SSIM_soft=0.7855 SSIM_bone=0.8186 PSNR=20.45  (2.6s)  
+[ 3/14] 2HNE030: MAE_w=200.23 MAE_soft=162.29 MAE_bone=384.98 SSIM_soft=0.9171 SSIM_bone=0.9360 PSNR=22.24  (8.5s)  
+[ 4/14] 2HNE034: MAE_w=235.12 MAE_soft=232.45 MAE_bone=382.78 SSIM_soft=0.8833 SSIM_bone=0.9063 PSNR=22.00  (8.3s)  
+[ 5/14] 2HNE038: MAE_w=159.96 MAE_soft=134.58 MAE_bone=274.02 SSIM_soft=0.8646 SSIM_bone=0.9096 PSNR=24.13  (2.8s)  
+[ 6/14] 2HNE043: MAE_w=207.12 MAE_soft=187.17 MAE_bone=422.13 SSIM_soft=0.8718 SSIM_bone=0.9030 PSNR=22.47  (2.7s)  
+[ 7/14] 2HNE054: MAE_w=147.26 MAE_soft=121.48 MAE_bone=254.73 SSIM_soft=0.8487 SSIM_bone=0.8904 PSNR=24.51  (2.7s)  
+[ 8/14] 2HNE059: MAE_w=165.23 MAE_soft=114.32 MAE_bone=294.79 SSIM_soft=0.8402 SSIM_bone=0.8802 PSNR=23.21  (2.7s)  
+[ 9/14] 2HNE060: MAE_w=211.85 MAE_soft=200.14 MAE_bone=305.13 SSIM_soft=0.9078 SSIM_bone=0.9259 PSNR=22.17  (8.7s)  
+[10/14] 2HNE070: MAE_w=180.54 MAE_soft=154.55 MAE_bone=411.28 SSIM_soft=0.7945 SSIM_bone=0.8460 PSNR=22.74  (2.7s)  
+[11/14] 2HNE090: MAE_w=223.06 MAE_soft=214.43 MAE_bone=353.52 SSIM_soft=0.9216 SSIM_bone=0.9377 PSNR=21.78  (8.5s)  
+[12/14] 2HNE092: MAE_w=239.45 MAE_soft=218.90 MAE_bone=411.11 SSIM_soft=0.8165 SSIM_bone=0.8491 PSNR=21.04  (2.5s)  
+[13/14] 2HNE097: MAE_w=247.84 MAE_soft=220.42 MAE_bone=433.86 SSIM_soft=0.8793 SSIM_bone=0.8995 PSNR=20.92  (8.1s)  
+[14/14] 2HNE108: MAE_w=248.64 MAE_soft=229.67 MAE_bone=509.98 SSIM_soft=0.8590 SSIM_bone=0.8855 PSNR=21.53  (8.9s)  
+
+=== DONE in 1.2 min ===
+
+--- summary 14-case (incl. 2HNE004 overlap caveat) ---
+  mae_whole_mean=207.2067 (std=35.9899)
+  mae_soft_mean=184.6295 (std=42.5937)
+  mae_bone_mean=369.8662 (std=74.6131)
+  ssim_soft_mean=0.8591 (std=0.0407)
+  ssim_bone_mean=0.8910 (std=0.0332)
+  psnr_mean=22.3704 (std=1.1954)
+
+--- summary 13-case fair (2HNE004 제외) ---
+  mae_whole_mean=209.9222 (std=35.9398)
+  mae_soft_mean=187.2439 (std=43.1055)
+  mae_bone_mean=376.5550 (std=73.2734)
+  ssim_soft_mean=0.8608 (std=0.0418)
+  ssim_bone_mean=0.8914 (std=0.0344)
+  psnr_mean=22.2455 (std=1.1492)

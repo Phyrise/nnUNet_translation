@@ -1,0 +1,56 @@
+[2026-05-19 15:07:49] INFO Device: cuda
+[2026-05-19 15:07:49] INFO GPU: NVIDIA GeForce RTX 5090
+[2026-05-19 15:08:43] INFO Train cases: ['2HNA002', '2HNA005', '2HNA010', '2HNA011', '2HNA014', '2HNA016', '2HNA019', '2HNA021', '2HNA024', '2HNA025', '2HNA027', '2HNA028', '2HNA029', '2HNA031', '2HNA032', '2HNA034', '2HNA035', '2HNA036', '2HNA038', '2HNA039', '2HNA040', '2HNA041', '2HNA044', '2HNA045', '2HNA046', '2HNA047', '2HNA050', '2HNA056', '2HNA058', '2HNA061', '2HNA068', '2HNA070', '2HNA073', '2HNA076', '2HNA077', '2HNA082', '2HNA083', '2HNA084', '2HNA086', '2HNA087', '2HNA088', '2HNA089', '2HNA090', '2HNA091', '2HNA092', '2HNA093', '2HNA094', '2HNA095', '2HNA096', '2HNA097', '2HNA098', '2HNA099', '2HNA100', '2HNA102', '2HNA104', '2HNA105', '2HNA106', '2HNA107', '2HNA108', '2HNA110', '2HNA111', '2HNA113', '2HNA115', '2HNB001', '2HNB002', '2HNB005', '2HNB006', '2HNB007', '2HNB009', '2HNB010', '2HNB011', '2HNB013', '2HNB014', '2HNB015', '2HNB016', '2HNB019', '2HNB020', '2HNB023', '2HNB024', '2HNB030', '2HNB031', '2HNB033', '2HNB034', '2HNB036', '2HNB037', '2HNB039', '2HNB043', '2HNB044', '2HNB045', '2HNB047', '2HNB050', '2HNB051', '2HNB053', '2HNB054', '2HNB055', '2HNB058', '2HNB059', '2HNB060', '2HNB061', '2HNB063', '2HNB064', '2HNB065', '2HNB067', '2HNB070', '2HNB071', '2HNB072', '2HNB074', '2HNB075', '2HNB078', '2HNB081', '2HNB082', '2HNB085', '2HNB086', '2HNB089', '2HNB091', '2HNB093', '2HNB098', '2HNB099', '2HNB101', '2HNB102', '2HNB103', '2HNB104', '2HNB105', '2HNB106', '2HNB107', '2HNB108', '2HNB109', '2HNB111', '2HNC017', '2HNC018', '2HNC020', '2HNC021', '2HNC024', '2HNC025', '2HNC027', '2HNC028', '2HNC029', '2HNC030', '2HNC034', '2HNC036', '2HNC037', '2HNC040', '2HNC042', '2HNC043', '2HNC046', '2HNC048', '2HNC049', '2HNC051', '2HNC052', '2HNC053', '2HNC055', '2HNC057', '2HNC058', '2HNC060', '2HNC061', '2HNC062', '2HNC063', '2HNC066', '2HNC069', '2HNC072', '2HNC074', '2HNC075', '2HNC076', '2HNC077', '2HNC078', '2HNC079', '2HNC080', '2HNC081', '2HNC082', '2HNC084', '2HNC085', '2HNC086', '2HNC087', '2HNC088', '2HNC091', '2HNC092', '2HNC094', '2HNC097', '2HNC098', '2HNC099', '2HNC100', '2HNC101', '2HNC102', '2HNC104', '2HNC108', '2HNC112', '2HNC113', '2HNC117', '2HNC118', '2HNC119', '2HNC121', '2HNC123', '2HNC125', '2HNE001', '2HNE003', '2HNE004', '2HNE006', '2HNE007']
+[2026-05-19 15:08:43] INFO Val cases:   ['2HNA026', '2HNA033']
+[2026-05-19 15:08:43] INFO Train slices: 16910  Val slices: 175
+[2026-05-19 15:08:43] INFO Model params: 6.50M
+[2026-05-19 15:09:13] INFO epoch 0 it 50/2113 loss 0.9490
+[2026-05-19 15:09:14] INFO epoch 0 it 100/2113 loss 0.7743
+[2026-05-19 15:09:15] INFO epoch 0 it 150/2113 loss 0.7332
+[2026-05-19 15:09:15] INFO epoch 0 it 200/2113 loss 0.7143
+[2026-05-19 15:09:16] INFO epoch 0 it 250/2113 loss 0.6965
+[2026-05-19 15:09:16] INFO epoch 0 it 300/2113 loss 0.6821
+[2026-05-19 15:09:17] INFO epoch 0 it 350/2113 loss 0.6776
+[2026-05-19 15:09:17] INFO epoch 0 it 400/2113 loss 0.6668
+[2026-05-19 15:09:18] INFO epoch 0 it 450/2113 loss 0.6610
+[2026-05-19 15:09:19] INFO epoch 0 it 500/2113 loss 0.6552
+[2026-05-19 15:09:19] INFO epoch 0 it 550/2113 loss 0.6546
+[2026-05-19 15:09:20] INFO epoch 0 it 600/2113 loss 0.6453
+[2026-05-19 15:09:20] INFO epoch 0 it 650/2113 loss 0.6415
+[2026-05-19 15:09:21] INFO epoch 0 it 700/2113 loss 0.6449
+[2026-05-19 15:09:22] INFO epoch 0 it 750/2113 loss 0.6402
+[2026-05-19 15:09:22] INFO epoch 0 it 800/2113 loss 0.6282
+[2026-05-19 15:09:23] INFO epoch 0 it 850/2113 loss 0.6203
+[2026-05-19 15:09:24] INFO epoch 0 it 900/2113 loss 0.6175
+[2026-05-19 15:09:24] INFO epoch 0 it 950/2113 loss 0.6127
+[2026-05-19 15:09:25] INFO epoch 0 it 1000/2113 loss 0.6067
+[2026-05-19 15:09:26] INFO epoch 0 it 1050/2113 loss 0.5993
+[2026-05-19 15:09:26] INFO epoch 0 it 1100/2113 loss 0.5981
+[2026-05-19 15:09:27] INFO epoch 0 it 1150/2113 loss 0.5936
+[2026-05-19 15:09:28] INFO epoch 0 it 1200/2113 loss 0.5916
+[2026-05-19 15:09:29] INFO epoch 0 it 1250/2113 loss 0.5817
+[2026-05-19 15:09:29] INFO epoch 0 it 1300/2113 loss 0.5758
+[2026-05-19 15:09:30] INFO epoch 0 it 1350/2113 loss 0.5668
+[2026-05-19 15:09:31] INFO epoch 0 it 1400/2113 loss 0.5610
+[2026-05-19 15:09:31] INFO epoch 0 it 1450/2113 loss 0.5627
+[2026-05-19 15:09:32] INFO epoch 0 it 1500/2113 loss 0.5561
+[2026-05-19 15:09:33] INFO epoch 0 it 1550/2113 loss 0.5432
+[2026-05-19 15:09:34] INFO epoch 0 it 1600/2113 loss 0.5368
+[2026-05-19 15:09:34] INFO epoch 0 it 1650/2113 loss 0.5374
+[2026-05-19 15:09:35] INFO epoch 0 it 1700/2113 loss 0.5328
+[2026-05-19 15:09:36] INFO epoch 0 it 1750/2113 loss 0.5281
+[2026-05-19 15:09:36] INFO epoch 0 it 1800/2113 loss 0.5257
+[2026-05-19 15:09:37] INFO epoch 0 it 1850/2113 loss 0.5213
+[2026-05-19 15:09:38] INFO epoch 0 it 1900/2113 loss 0.5111
+[2026-05-19 15:09:39] INFO epoch 0 it 1950/2113 loss 0.5084
+[2026-05-19 15:09:39] INFO epoch 0 it 2000/2113 loss 0.5018
+[2026-05-19 15:09:40] INFO epoch 0 it 2050/2113 loss 0.4970
+[2026-05-19 15:09:41] INFO epoch 0 it 2100/2113 loss 0.4967
+[2026-05-19 15:09:43] INFO epoch 0 done in 60.1s lr=0.00e+00 avg_train_loss=0.6076
+C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\inferers\utils.py:226: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\python_variable_indexing.cpp:353.)
+  win_data = torch.cat([inputs[win_slice] for win_slice in unravel_slice]).to(sw_device)
+C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\inferers\utils.py:370: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\python_variable_indexing.cpp:353.)
+  out[idx_zm] += p
+[2026-05-19 15:09:56] INFO epoch 0 val MAE(HU): 1092.55
+[2026-05-19 15:09:56] INFO new best MAE: 1092.55 ¡æ saved best.pth
+[2026-05-19 15:09:57] INFO Training done. Best val MAE(HU): 1092.55

@@ -1,0 +1,4 @@
+[2026-04-29 17:53:23] watchdog_sct (full_v2) started
+[2026-04-29 17:53:23] attempt 1: fresh start (no last.pth)
+[2026-04-29 18:01:55] watchdog_sct (full_v2) started
+[2026-04-29 18:01:55] attempt 1: resuming from last.pth

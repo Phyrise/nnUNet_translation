@@ -1,0 +1,4 @@
+[2026-04-29 17:53:25] post-train pipeline (full_v2) started
+[2026-04-29 17:53:25] polling for 'Training done.' in C:\Users\USER\Desktop\dev\sct_unet\outputs\full_v2\train.log every 60s
+[2026-04-29 18:01:56] post-train pipeline (full_v2) started
+[2026-04-29 18:01:56] polling for 'Training done.' in C:\Users\USER\Desktop\dev\sct_unet\outputs\full_v2\train.log every 60s

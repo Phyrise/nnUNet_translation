@@ -1,0 +1,70 @@
+[2026-04-29 19:15:04] INFO Device: cuda
+[2026-04-29 19:15:04] INFO GPU: NVIDIA GeForce RTX 5090
+[2026-04-29 19:15:04] INFO Loaded outputs/full_v2/best.pth
+[2026-04-29 19:15:04] INFO   ckpt epoch=31 best_mae=26.366189781599065
+[2026-04-29 19:15:04] INFO Cases to infer: 60
+C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\inferers\utils.py:226: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\python_variable_indexing.cpp:353.)
+  win_data = torch.cat([inputs[win_slice] for win_slice in unravel_slice]).to(sw_device)
+C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\inferers\utils.py:370: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\autograd\python_variable_indexing.cpp:353.)
+  out[idx_zm] += p
+[2026-04-29 19:15:04] INFO [1/60] 2HNE010 shape=(297, 297, 71) done in 0.7s
+[2026-04-29 19:15:05] INFO [2/60] 2HNE011 shape=(297, 299, 71) done in 0.5s
+[2026-04-29 19:15:05] INFO [3/60] 2HNE012 shape=(299, 298, 73) done in 0.5s
+[2026-04-29 19:15:06] INFO [4/60] 2HNE016 shape=(297, 298, 71) done in 0.5s
+[2026-04-29 19:15:07] INFO [5/60] 2HNE017 shape=(498, 457, 68) done in 1.2s
+[2026-04-29 19:15:07] INFO [6/60] 2HNE018 shape=(297, 298, 71) done in 0.5s
+[2026-04-29 19:15:08] INFO [7/60] 2HNE022 shape=(296, 298, 71) done in 0.5s
+[2026-04-29 19:15:08] INFO [8/60] 2HNE023 shape=(298, 297, 72) done in 0.5s
+[2026-04-29 19:15:09] INFO [9/60] 2HNE024 shape=(301, 297, 72) done in 0.5s
+[2026-04-29 19:15:10] INFO [10/60] 2HNE026 shape=(498, 482, 66) done in 1.1s
+[2026-04-29 19:15:11] INFO [11/60] 2HNE028 shape=(498, 496, 67) done in 1.2s
+[2026-04-29 19:15:12] INFO [12/60] 2HNE030 shape=(498, 500, 70) done in 1.2s
+[2026-04-29 19:15:13] INFO [13/60] 2HNE031 shape=(296, 298, 71) done in 0.5s
+[2026-04-29 19:15:13] INFO [14/60] 2HNE032 shape=(295, 296, 71) done in 0.5s
+[2026-04-29 19:15:14] INFO [15/60] 2HNE034 shape=(497, 497, 66) done in 1.2s
+[2026-04-29 19:15:15] INFO [16/60] 2HNE036 shape=(299, 300, 73) done in 0.5s
+[2026-04-29 19:15:15] INFO [17/60] 2HNE037 shape=(297, 297, 71) done in 0.5s
+[2026-04-29 19:15:16] INFO [18/60] 2HNE038 shape=(297, 296, 71) done in 0.4s
+[2026-04-29 19:15:17] INFO [19/60] 2HNE041 shape=(499, 480, 69) done in 1.1s
+[2026-04-29 19:15:17] INFO [20/60] 2HNE042 shape=(298, 298, 71) done in 0.5s
+[2026-04-29 19:15:18] INFO [21/60] 2HNE043 shape=(297, 297, 71) done in 0.5s
+[2026-04-29 19:15:18] INFO [22/60] 2HNE046 shape=(303, 297, 73) done in 0.5s
+[2026-04-29 19:15:19] INFO [23/60] 2HNE049 shape=(299, 299, 73) done in 0.5s
+[2026-04-29 19:15:19] INFO [24/60] 2HNE050 shape=(298, 299, 72) done in 0.5s
+[2026-04-29 19:15:20] INFO [25/60] 2HNE051 shape=(295, 297, 71) done in 0.5s
+[2026-04-29 19:15:20] INFO [26/60] 2HNE054 shape=(299, 299, 71) done in 0.5s
+[2026-04-29 19:15:21] INFO [27/60] 2HNE059 shape=(296, 298, 71) done in 0.5s
+[2026-04-29 19:15:22] INFO [28/60] 2HNE060 shape=(499, 493, 70) done in 1.2s
+[2026-04-29 19:15:22] INFO [29/60] 2HNE064 shape=(297, 296, 71) done in 0.5s
+[2026-04-29 19:15:24] INFO [30/60] 2HNE066 shape=(500, 497, 68) done in 1.2s
+[2026-04-29 19:15:25] INFO [31/60] 2HNE067 shape=(496, 496, 66) done in 1.1s
+[2026-04-29 19:15:26] INFO [32/60] 2HNE068 shape=(501, 484, 71) done in 1.2s
+[2026-04-29 19:15:26] INFO [33/60] 2HNE070 shape=(301, 297, 74) done in 0.5s
+[2026-04-29 19:15:27] INFO [34/60] 2HNE072 shape=(297, 297, 73) done in 0.5s
+[2026-04-29 19:15:27] INFO [35/60] 2HNE074 shape=(298, 300, 73) done in 0.5s
+[2026-04-29 19:15:28] INFO [36/60] 2HNE075 shape=(298, 298, 72) done in 0.5s
+[2026-04-29 19:15:29] INFO [37/60] 2HNE076 shape=(470, 499, 71) done in 1.2s
+[2026-04-29 19:15:29] INFO [38/60] 2HNE079 shape=(298, 297, 71) done in 0.5s
+[2026-04-29 19:15:31] INFO [39/60] 2HNE081 shape=(503, 498, 72) done in 1.2s
+[2026-04-29 19:15:31] INFO [40/60] 2HNE083 shape=(296, 297, 71) done in 0.5s
+[2026-04-29 19:15:32] INFO [41/60] 2HNE084 shape=(298, 300, 71) done in 0.5s
+[2026-04-29 19:15:32] INFO [42/60] 2HNE086 shape=(296, 298, 71) done in 0.5s
+[2026-04-29 19:15:33] INFO [43/60] 2HNE087 shape=(497, 497, 67) done in 1.2s
+[2026-04-29 19:15:34] INFO [44/60] 2HNE089 shape=(499, 501, 71) done in 1.2s
+[2026-04-29 19:15:36] INFO [45/60] 2HNE090 shape=(501, 498, 69) done in 1.2s
+[2026-04-29 19:15:36] INFO [46/60] 2HNE092 shape=(297, 297, 70) done in 0.5s
+[2026-04-29 19:15:37] INFO [47/60] 2HNE093 shape=(477, 498, 66) done in 1.1s
+[2026-04-29 19:15:38] INFO [48/60] 2HNE095 shape=(500, 500, 71) done in 1.2s
+[2026-04-29 19:15:40] INFO [49/60] 2HNE097 shape=(499, 483, 68) done in 1.1s
+[2026-04-29 19:15:41] INFO [50/60] 2HNE098 shape=(498, 497, 66) done in 1.1s
+[2026-04-29 19:15:41] INFO [51/60] 2HNE100 shape=(301, 306, 76) done in 0.5s
+[2026-04-29 19:15:42] INFO [52/60] 2HNE101 shape=(298, 299, 73) done in 0.5s
+[2026-04-29 19:15:42] INFO [53/60] 2HNE102 shape=(298, 296, 71) done in 0.5s
+[2026-04-29 19:15:43] INFO [54/60] 2HNE103 shape=(498, 499, 70) done in 1.1s
+[2026-04-29 19:15:44] INFO [55/60] 2HNE104 shape=(499, 499, 70) done in 1.2s
+[2026-04-29 19:15:46] INFO [56/60] 2HNE105 shape=(504, 498, 72) done in 1.2s
+[2026-04-29 19:15:47] INFO [57/60] 2HNE106 shape=(502, 490, 71) done in 1.2s
+[2026-04-29 19:15:48] INFO [58/60] 2HNE107 shape=(500, 501, 71) done in 1.2s
+[2026-04-29 19:15:49] INFO [59/60] 2HNE108 shape=(499, 501, 71) done in 1.2s
+[2026-04-29 19:15:50] INFO [60/60] 2HNE109 shape=(501, 499, 71) done in 1.2s
+[2026-04-29 19:15:50] INFO Total: 60 cases in 46.7s (0.8s/case)

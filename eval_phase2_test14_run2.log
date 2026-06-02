@@ -1,0 +1,40 @@
+=== sct_unet 시도 4 best.pth → phase2 test 14 case 평가 ===
+  device: cuda
+  cfg: C:\Users\USER\Desktop\dev\sct_unet\configs\full_v3_no_amp.yaml
+  ckpt: C:\Users\USER\Desktop\dev\sct_unet\outputs\full_v3_no_amp\best.pth
+  out: C:\Users\USER\Desktop\dev\sct_unet\outputs\eval_phase2_test14
+  cases: ['2HNE004', '2HNE024', '2HNE030', '2HNE034', '2HNE038', '2HNE043', '2HNE054', '2HNE059', '2HNE060', '2HNE070', '2HNE090', '2HNE092', '2HNE097', '2HNE108']
+
+Traceback (most recent call last):
+  File "C:\Users\USER\Desktop\dev\sct_unet\scripts\eval_phase2_test14.py", line 244, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\USER\Desktop\dev\sct_unet\scripts\eval_phase2_test14.py", line 148, in main
+    model = load_sct_unet_model(cfg, str(CKPT_PATH), device)
+  File "C:\Users\USER\Desktop\dev\sct_unet\scripts\eval_phase2_test14.py", line 70, in load_sct_unet_model
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 1579, in load
+    return _load(
+        opened_zipfile,
+    ...<3 lines>...
+        **pickle_load_args,
+    )
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 2190, in _load
+    result = unpickler.load()
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 2154, in persistent_load
+    typed_storage = load_tensor(
+        dtype, nbytes, key, _maybe_decode_ascii(location)
+    )
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 2116, in load_tensor
+    wrap_storage = restore_location(storage, location)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 1920, in restore_location
+    return default_restore_location(storage, str(map_location))
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 734, in default_restore_location
+    result = fn(storage, location)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 667, in _deserialize
+    device = _validate_device(location, backend_name)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\serialization.py", line 644, in _validate_device
+    raise RuntimeError(
+    ...<4 lines>...
+    )
+RuntimeError: Attempting to deserialize object on CUDA device 0 but torch.cuda.device_count() is 0. Please use torch.load with map_location to map your storages to an existing device.

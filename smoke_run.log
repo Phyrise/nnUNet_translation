@@ -1,0 +1,110 @@
+[2026-04-29 09:34:41] INFO Device: cuda
+[2026-04-29 09:34:41] INFO GPU: NVIDIA GeForce RTX 5090
+[2026-04-29 09:35:33] INFO Train cases: ['2HNA002', '2HNA005', '2HNA010', '2HNA011', '2HNA014', '2HNA016', '2HNA019', '2HNA021', '2HNA024', '2HNA025', '2HNA027', '2HNA028', '2HNA029', '2HNA031', '2HNA032', '2HNA034', '2HNA035', '2HNA036', '2HNA038', '2HNA039', '2HNA040', '2HNA041', '2HNA044', '2HNA045', '2HNA046', '2HNA047', '2HNA050', '2HNA056', '2HNA058', '2HNA061', '2HNA068', '2HNA070', '2HNA073', '2HNA076', '2HNA077', '2HNA082', '2HNA083', '2HNA084', '2HNA086', '2HNA087', '2HNA088', '2HNA089', '2HNA090', '2HNA091', '2HNA092', '2HNA093', '2HNA094', '2HNA095', '2HNA096', '2HNA097', '2HNA098', '2HNA099', '2HNA100', '2HNA102', '2HNA104', '2HNA105', '2HNA106', '2HNA107', '2HNA108', '2HNA110', '2HNA111', '2HNA113', '2HNA115', '2HNB001', '2HNB002', '2HNB005', '2HNB006', '2HNB007', '2HNB009', '2HNB010', '2HNB011', '2HNB013', '2HNB014', '2HNB015', '2HNB016', '2HNB019', '2HNB020', '2HNB023', '2HNB024', '2HNB030', '2HNB031', '2HNB033', '2HNB034', '2HNB036', '2HNB037', '2HNB039', '2HNB043', '2HNB044', '2HNB045', '2HNB047', '2HNB050', '2HNB051', '2HNB053', '2HNB054', '2HNB055', '2HNB058', '2HNB059', '2HNB060', '2HNB061', '2HNB063', '2HNB064', '2HNB065', '2HNB067', '2HNB070', '2HNB071', '2HNB072', '2HNB074', '2HNB075', '2HNB078', '2HNB081', '2HNB082', '2HNB085', '2HNB086', '2HNB089', '2HNB091', '2HNB093', '2HNB098', '2HNB099', '2HNB101', '2HNB102', '2HNB103', '2HNB104', '2HNB105', '2HNB106', '2HNB107', '2HNB108', '2HNB109', '2HNB111', '2HNC017', '2HNC018', '2HNC020', '2HNC021', '2HNC024', '2HNC025', '2HNC027', '2HNC028', '2HNC029', '2HNC030', '2HNC034', '2HNC036', '2HNC037', '2HNC040', '2HNC042', '2HNC043', '2HNC046', '2HNC048', '2HNC049', '2HNC051', '2HNC052', '2HNC053', '2HNC055', '2HNC057', '2HNC058', '2HNC060', '2HNC061', '2HNC062', '2HNC063', '2HNC066', '2HNC069', '2HNC072', '2HNC074', '2HNC075', '2HNC076', '2HNC077', '2HNC078', '2HNC079', '2HNC080', '2HNC081', '2HNC082', '2HNC084', '2HNC085', '2HNC086', '2HNC087', '2HNC088', '2HNC091', '2HNC092', '2HNC094', '2HNC097', '2HNC098', '2HNC099', '2HNC100', '2HNC101', '2HNC102', '2HNC104', '2HNC108', '2HNC112', '2HNC113', '2HNC117', '2HNC118', '2HNC119', '2HNC121', '2HNC123', '2HNC125', '2HNE001', '2HNE003', '2HNE004', '2HNE006', '2HNE007']
+[2026-04-29 09:35:33] INFO Val cases:   ['2HNA026', '2HNA033']
+[2026-04-29 09:35:33] INFO Train slices: 16910  Val slices: 175
+[2026-04-29 09:35:34] INFO Model params: 6.50M
+[2026-04-29 09:35:59] INFO epoch 0 it 50/2113 loss 0.9165
+[2026-04-29 09:36:00] INFO epoch 0 it 100/2113 loss 0.7370
+[2026-04-29 09:36:01] INFO epoch 0 it 150/2113 loss 0.6936
+[2026-04-29 09:36:01] INFO epoch 0 it 200/2113 loss 0.6761
+[2026-04-29 09:36:02] INFO epoch 0 it 250/2113 loss 0.6560
+[2026-04-29 09:36:02] INFO epoch 0 it 300/2113 loss 0.6413
+[2026-04-29 09:36:03] INFO epoch 0 it 350/2113 loss 0.6400
+[2026-04-29 09:36:04] INFO epoch 0 it 400/2113 loss 0.6290
+[2026-04-29 09:36:04] INFO epoch 0 it 450/2113 loss 0.6227
+[2026-04-29 09:36:05] INFO epoch 0 it 500/2113 loss 0.6170
+[2026-04-29 09:36:05] INFO epoch 0 it 550/2113 loss 0.6153
+[2026-04-29 09:36:06] INFO epoch 0 it 600/2113 loss 0.6077
+[2026-04-29 09:36:07] INFO epoch 0 it 650/2113 loss 0.6039
+[2026-04-29 09:36:07] INFO epoch 0 it 700/2113 loss 0.6102
+[2026-04-29 09:36:08] INFO epoch 0 it 750/2113 loss 0.5988
+[2026-04-29 09:36:08] INFO epoch 0 it 800/2113 loss 0.5872
+[2026-04-29 09:36:09] INFO epoch 0 it 850/2113 loss 0.5837
+[2026-04-29 09:36:09] INFO epoch 0 it 900/2113 loss 0.5776
+[2026-04-29 09:36:10] INFO epoch 0 it 950/2113 loss 0.5747
+[2026-04-29 09:36:11] INFO epoch 0 it 1000/2113 loss 0.5712
+[2026-04-29 09:36:11] INFO epoch 0 it 1050/2113 loss 0.5632
+[2026-04-29 09:36:12] INFO epoch 0 it 1100/2113 loss 0.5648
+[2026-04-29 09:36:12] INFO epoch 0 it 1150/2113 loss 0.5593
+[2026-04-29 09:36:13] INFO epoch 0 it 1200/2113 loss 0.5579
+[2026-04-29 09:36:13] INFO epoch 0 it 1250/2113 loss 0.5489
+[2026-04-29 09:36:14] INFO epoch 0 it 1300/2113 loss 0.5426
+[2026-04-29 09:36:15] INFO epoch 0 it 1350/2113 loss 0.5298
+[2026-04-29 09:36:15] INFO epoch 0 it 1400/2113 loss 0.5267
+[2026-04-29 09:36:16] INFO epoch 0 it 1450/2113 loss 0.5315
+[2026-04-29 09:36:16] INFO epoch 0 it 1500/2113 loss 0.5265
+[2026-04-29 09:36:17] INFO epoch 0 it 1550/2113 loss 0.5114
+[2026-04-29 09:36:17] INFO epoch 0 it 1600/2113 loss 0.5044
+[2026-04-29 09:36:18] INFO epoch 0 it 1650/2113 loss 0.5077
+[2026-04-29 09:36:18] INFO epoch 0 it 1700/2113 loss 0.5036
+[2026-04-29 09:36:19] INFO epoch 0 it 1750/2113 loss 0.5015
+[2026-04-29 09:36:20] INFO epoch 0 it 1800/2113 loss 0.5018
+[2026-04-29 09:36:20] INFO epoch 0 it 1850/2113 loss 0.4951
+[2026-04-29 09:36:21] INFO epoch 0 it 1900/2113 loss 0.4856
+[2026-04-29 09:36:21] INFO epoch 0 it 1950/2113 loss 0.4853
+[2026-04-29 09:36:22] INFO epoch 0 it 2000/2113 loss 0.4787
+[2026-04-29 09:36:23] INFO epoch 0 it 2050/2113 loss 0.4735
+[2026-04-29 09:36:23] INFO epoch 0 it 2100/2113 loss 0.4737
+[2026-04-29 09:36:25] INFO epoch 0 done in 51.7s lr=0.00e+00
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\USER\Desktop\dev\sct_unet\src\train.py", line 151, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\USER\Desktop\dev\sct_unet\src\train.py", line 128, in main
+    mae_hu = evaluate(model, val_loader, device, ct_clip)
+  File "C:\Users\USER\Desktop\dev\sct_unet\src\train.py", line 35, in evaluate
+    pred = model(x)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\networks\nets\unet.py", line 297, in forward
+    x = self.model(x)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\container.py", line 253, in forward
+    input = module(input)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\networks\layers\simplelayers.py", line 128, in forward
+    y = self.submodule(x)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\container.py", line 253, in forward
+    input = module(input)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\networks\layers\simplelayers.py", line 128, in forward
+    y = self.submodule(x)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\container.py", line 253, in forward
+    input = module(input)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\torch\nn\modules\module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\USER\anaconda3\envs\nnunet\Lib\site-packages\monai\networks\layers\simplelayers.py", line 131, in forward
+    return torch.cat([x, y], dim=self.dim)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Sizes of tensors must match except in dimension 1. Expected size 39 but got size 40 for tensor number 1 in the list.
