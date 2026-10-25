@@ -9,7 +9,7 @@ class ImageNormalization(ABC):
     leaves_pixels_outside_mask_at_zero_if_use_mask_for_norm_is_true = None
 
     def __init__(self, use_mask_for_norm: bool = None, intensityproperties: dict = None,
-                 target_dtype: Type[number] = np.float32): #arthur : default to float16 ?
+                 target_dtype: Type[number] = np.float32):
         assert use_mask_for_norm is None or isinstance(use_mask_for_norm, bool)
         self.use_mask_for_norm = use_mask_for_norm
         assert isinstance(intensityproperties, dict)
@@ -86,10 +86,7 @@ class CTNormalization_clip(ImageNormalization):
         mean_intensity = self.intensityproperties['mean']
         std_intensity = self.intensityproperties['std']
         image = image.astype(self.target_dtype, copy=False)
-        print("---------------")
-        print("before:", np.min(image), np.max(image))
         np.clip(image, self._min, self._max, out=image)
-        print("after:", np.min(image), np.max(image))
 
         image -= mean_intensity
         image /= max(std_intensity, 1e-8)
@@ -100,7 +97,6 @@ class CTtanh(ImageNormalization):
     _max = 2000
     leaves_pixels_outside_mask_at_zero_if_use_mask_for_norm_is_true = False
     def run(self, image: np.ndarray, seg: np.ndarray = None) -> np.ndarray:
-        print(f"range for CTtanh normalization : {_min} to {_max}")
         image = image.astype(self.target_dtype, copy=False)
         np.clip(image, self._min, self._max, out=image)
         image -= self._min

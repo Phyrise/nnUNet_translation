@@ -33,15 +33,16 @@ class SimpleITKIO(BaseReaderWriter):
         directions = []
 
         spacings_for_nnunet = []
+        orientations = []
         for f in image_fnames:
             itk_image = sitk.ReadImage(f)
-            ######### FIX FOR INFERENCE #########
+            # images are processed in LPS orientation; the original orientation is restored in write_seg
             curr_orient = sitk.DICOMOrientImageFilter_GetOrientationFromDirectionCosines(
                 itk_image.GetDirection()
             )
+            orientations.append(curr_orient)
             if curr_orient != "LPS":
                 itk_image = sitk.DICOMOrient(itk_image, "LPS")
-            ######### 
             spacings.append(itk_image.GetSpacing())
             origins.append(itk_image.GetOrigin())
             directions.append(itk_image.GetDirection())
@@ -110,7 +111,8 @@ class SimpleITKIO(BaseReaderWriter):
                 # this saves the sitk geometry information. This part is NOT used by nnU-Net!
                 'spacing': spacings[0],
                 'origin': origins[0],
-                'direction': directions[0]
+                'direction': directions[0],
+                'original_orientation': orientations[0]
             },
             # the spacing is inverted with [::-1] because sitk returns the spacing in the wrong order lol. Image arrays
             # are returned x,y,z but spacing is returned z,y,x. Duh.
@@ -128,13 +130,16 @@ class SimpleITKIO(BaseReaderWriter):
         if output_dimension == 2:
             seg = seg[0]
 
-        if seg.dtype=="float16":
-            itk_image = sitk.GetImageFromArray(seg.astype(np.float32)) #TODO: to improve
+        if np.issubdtype(seg.dtype, np.floating):  # translated image
+            itk_image = sitk.GetImageFromArray(seg.astype(np.float32, copy=False))
         else:
-            itk_image = sitk.GetImageFromArray(seg.astype(np.uint8))
-        
+            itk_image = sitk.GetImageFromArray(seg.astype(np.uint8 if np.max(seg) < 255 else np.uint16, copy=False))
+
         itk_image.SetSpacing(properties['sitk_stuff']['spacing'])
         itk_image.SetOrigin(properties['sitk_stuff']['origin'])
         itk_image.SetDirection(properties['sitk_stuff']['direction'])
+        original_orientation = properties['sitk_stuff'].get('original_orientation', 'LPS')
+        if output_dimension == 3 and original_orientation != 'LPS':
+            itk_image = sitk.DICOMOrient(itk_image, original_orientation)
 
         sitk.WriteImage(itk_image, output_fname, True)

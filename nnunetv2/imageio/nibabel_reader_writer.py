@@ -92,7 +92,8 @@ class NibabelIO(BaseReaderWriter):
 
     def write_seg(self, seg: np.ndarray, output_fname: str, properties: dict) -> None:
         # revert transpose
-        seg = seg.transpose((2, 1, 0)).astype(np.uint8)
+        seg = seg.transpose((2, 1, 0))
+        seg = seg.astype(np.float32 if np.issubdtype(seg.dtype, np.floating) else np.uint8, copy=False)
         seg_nib = nibabel.Nifti1Image(seg, affine=properties['nibabel_stuff']['original_affine'])
         nibabel.save(seg_nib, output_fname)
 
@@ -175,7 +176,8 @@ class NibabelIOWithReorient(BaseReaderWriter):
 
     def write_seg(self, seg: np.ndarray, output_fname: str, properties: dict) -> None:
         # revert transpose
-        seg = seg.transpose((2, 1, 0)).astype(np.uint8)
+        seg = seg.transpose((2, 1, 0))
+        seg = seg.astype(np.float32 if np.issubdtype(seg.dtype, np.floating) else np.uint8, copy=False)
 
         seg_nib = nibabel.Nifti1Image(seg, affine=properties['nibabel_stuff']['reoriented_affine'])
         seg_nib_reoriented = seg_nib.as_reoriented(io_orientation(properties['nibabel_stuff']['original_affine']))

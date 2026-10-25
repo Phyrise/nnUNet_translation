@@ -1,8 +1,8 @@
 [project]
 name = "nnunetv2"
-version = "2.5"
+version = "2.5+translation"
 requires-python = ">=3.9"
-description = "nnU-Net_translation is an adapted nnUNet for medical image translation"
+description = "nnU-Net adapted for medical image-to-image translation (e.g. MR to CT)"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -62,6 +62,7 @@ homepage = "https://github.com/Phyrise/nnUNet_translation"
 repository = "https://github.com/Phyrise/nnUNet_translation"
 
 [project.scripts]
+nnUNetv2_translation_prepare = "nnunetv2.translation.prepare:main"
 nnUNetv2_plan_and_preprocess = "nnunetv2.experiment_planning.plan_and_preprocess_entrypoints:plan_and_preprocess_entry"
 nnUNetv2_extract_fingerprint = "nnunetv2.experiment_planning.plan_and_preprocess_entrypoints:extract_fingerprint_entry"
 nnUNetv2_plan_experiment = "nnunetv2.experiment_planning.plan_and_preprocess_entrypoints:plan_experiment_entry"
@@ -91,6 +92,9 @@ dev = [
     "ruff",
     "pre-commit"
 ]
+
+[tool.setuptools.packages.find]
+include = ["nnunetv2*"]
 
 [build-system]
 requires = ["setuptools>=67.8.0"]

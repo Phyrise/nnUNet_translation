@@ -1,211 +1,108 @@
-import torch, os
-from torch import nn, Tensor
-import numpy as np
-from .unet import PlainConvUNet, ResidualEncoderUNet
-from .segairway import SegAirwayModel
+"""
+Anatomical Feature-Prioritized (AFP) loss (Longuefosse et al., Physics in Medicine & Biology 2025,
+https://doi.org/10.1088/1361-6560/adea07).
+
+The prediction and the target go through a frozen nnU-Net segmentation network trained on the target modality.
+The loss is the L1 distance between their feature maps (encoder stages except the two deepest, every decoder stage),
+plus mae_weight * L1 between the images. Any nnU-Net v2 checkpoint can be used (e.g. a model trained on
+TotalSegmentator labels): the network is rebuilt from the plans stored in the checkpoint.
+"""
+import torch
 import torch.nn.functional as F
-import math
+from batchgenerators.utilities.file_and_folder_operations import isdir, isfile, join
+from torch import nn
+
+from nnunetv2.utilities.get_network_from_plans import get_network_from_plans
+from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
+
+
+def load_segmentation_network(checkpoint_path: str) -> nn.Module:
+    """Rebuilds a trained nnU-Net v2 network from its checkpoint (checkpoint_final.pth or its fold folder)."""
+    if isdir(checkpoint_path):
+        checkpoint_path = join(checkpoint_path, 'checkpoint_final.pth')
+    if not isfile(checkpoint_path):
+        raise FileNotFoundError(f'AFP: segmentation checkpoint not found: {checkpoint_path}')
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    init_args = checkpoint['init_args']
+    configuration = PlansManager(init_args['plans']).get_configuration(init_args['configuration'])
+
+    state_dict = {}
+    for k, v in checkpoint['network_weights'].items():
+        for prefix in ('module.', '_orig_mod.'):
+            if k.startswith(prefix):
+                k = k[len(prefix):]
+        state_dict[k] = v
+    num_input_channels = len(init_args['dataset_json']['channel_names'])
+    if num_input_channels != 1:
+        raise ValueError(f'AFP: the segmentation network must take one channel, it takes {num_input_channels}')
+    seg_layer_keys = sorted(k for k in state_dict if k.startswith('decoder.seg_layers.') and k.endswith('.weight'))
+    num_classes = state_dict[seg_layer_keys[0]].shape[0]
+
+    network = get_network_from_plans(configuration.network_arch_class_name, configuration.network_arch_init_kwargs,
+                                     configuration.network_arch_init_kwargs_req_import, num_input_channels,
+                                     num_classes, allow_init=False, deep_supervision=False)
+    network.load_state_dict(state_dict)
+    return network
+
 
 class AFP(nn.Module):
-    def __init__(self, net: str = "", layers=[], mae_weight=0.0, normalize_before_L1=False):
+    def __init__(self, checkpoint_path: str, layers=None, mae_weight: float = 0.0, normalize_before_L1: bool = False,
+                 device: torch.device = torch.device('cuda')):
         super().__init__()
-        model_params = {
-            "TotalSeg_vessels": { #1.5mm
-                "weights_path": "/data2/alonguefosse/checkpoints/TotalSeg_vessels.pth",
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 1, 2]],
-                "num_classes": 3,
-                "model_type": "PlainConvUNet"
-            },
-            "TotalSeg_V2": { #patch_size : [128 128 128], 0.6mm, fused 7 labels
-                "weights_path": "/export/work/users/arthur/checkpoints/TotalSeg_V2.pth", # 5 stage
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
-                "num_classes": 8,
-                "model_type": "PlainConvUNet"
-            },
-            "TotalSeg117": { #patch_size : [128 128 128], 0.6mm, 117 labels kept
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset096_Lungs_117labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
-                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 118,
-                "model_type": "PlainConvUNet_5"
-            },
-            "Imene8": { #96x160x160
-                "weights_path": "/export/work/users/arthur/checkpoints/nnUNet_Imene8_best.pth", # 5 stage
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "num_classes": 9,
-                "model_type": "PlainConvUNet",
-            },
-            "NaviAirway": {
-                "weights_path" : "/export/work/users/arthur/projects/NaviAirway/model_para/checkpoint_semi_supervise_learning.pkl",
-                "model_type": "NaviAirway"
-            },
-            "TotalSeg_AB_7labels": { #1*1*3mm, RIKEN
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset093_SynthRAD2025_AB_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 7,
-                "model_type": "PlainConvUNet"
-            },
-            "Navi_1label": { #O.6*0.6*0.6mm, RIKEN, trained on CHU using Navi labels 
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset095_Lungs_Airways/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
-                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 2,
-                "model_type": "PlainConvUNet"
-            },
-            "Navi_2labels": { #O.6*0.6*0.6mm, RIKEN, trained on CHU using Navi labels split (1:trachea, 2:airways)
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset097_Lungs_Airways2/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]],
-                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 3,
-                "model_type": "PlainConvUNet"
-            },
-            "TotalSeg_ABHNTH_20labels": { #1*1*3mm, RIKEN
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset091_SynthRAD2025_20labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 21,
-                "model_type": "PlainConvUNet"
-            },
-            "TotalSeg_ABHNTH_117labels": { #1*1*3mm, RIKEN
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset090_SynthRAD2025_117labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 118,
-                "model_type": "PlainConvUNet"
-            },
-            "TotalSeg_AB_7labels_ResEnc": { #1*1*3mm, RIKEN
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset093_SynthRAD2025_AB_7labels/nnUNetTrainer__nnUNetResEncUNetLPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [1, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[1, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 7,
-                "model_type": "ResidualEncoderUNet"
-            },
-            "TotalSeg_AB_1x1x1_7labels": { #1*1*3mm, RIKEN
-                "weights_path": "/export/work/users/arthur/nnUNet/results/Dataset094_SynthRAD2025_AB_1x1x1_7labels/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth",
-                "strides": [[1, 1, 1], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [1, 2, 2]],
-                "kernels" : [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]],
-                "num_classes": 7,
-                "model_type": "PlainConvUNet"
-            },
-        }
-        params = model_params[net]
-        kernel = params.get("kernels", [[3, 3, 3]] * 6)
-        if params["model_type"] == "PlainConvUNet":
-            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6, 7, 8]
-            self.stages = 5
-            model = PlainConvUNet(input_channels=1, n_stages=6, features_per_stage=[32, 64, 128, 256, 320, 320], 
-                                conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
-                                num_classes=params["num_classes"], deep_supervision=False, n_conv_per_stage=[2] * 6, 
-                                n_conv_per_stage_decoder=[2] * 5, conv_bias=True, norm_op=nn.InstanceNorm3d, 
-                                norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
-                                nonlin_kwargs={'inplace': True})
-        elif params["model_type"] == "PlainConvUNet_5":
-            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6]
-            self.stages = 4
-            model = PlainConvUNet(input_channels=1, n_stages=5, features_per_stage=[32, 64, 128, 256, 320], 
-                                conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
-                                num_classes=params["num_classes"], deep_supervision=False, n_conv_per_stage=[2] * 5, 
-                                n_conv_per_stage_decoder=[2] * 4, conv_bias=True, norm_op=nn.InstanceNorm3d, 
-                                norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
-                                nonlin_kwargs={'inplace': True})
-        elif params["model_type"] == "ResidualEncoderUNet":
-            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6, 7, 8]
-            self.stages = 6
-            model = ResidualEncoderUNet(input_channels=1, n_stages=7, features_per_stage=[32, 64, 128, 256, 320, 320, 320], 
-                                conv_op=nn.Conv3d, kernel_sizes=kernel, strides=params["strides"], 
-                                num_classes=params["num_classes"], deep_supervision=False, n_blocks_per_stage=[2] * 7, 
-                                n_conv_per_stage_decoder=[2] * 6, conv_bias=True, norm_op=nn.InstanceNorm3d, 
-                                norm_op_kwargs={'eps': 1e-5, 'affine': True}, nonlin=nn.LeakyReLU, 
-                                nonlin_kwargs={'inplace': True})
-        elif params["model_type"] == "NaviAirway":
-            self.layers = layers if layers else [0, 1, 2, 3, 4, 5, 6]
-            self.stages = 4
-            model = SegAirwayModel(in_channels=1, out_channels=2)
-        
-        if not os.path.exists(params["weights_path"]):
-            raise FileNotFoundError(f'Error: Checkpoint not found at {params["weights_path"]}')
-        checkpoint = torch.load(params["weights_path"], map_location='cuda', weights_only = False)
-        model_state_dict = checkpoint.get('state_dict', checkpoint.get('network_weights', checkpoint.get('model_state_dict')))
-        model.load_state_dict(model_state_dict, strict=False)
-        print(f"AFP, layers {layers}, loaded {net} : {params['weights_path']}")
-        model.eval()
-  
-        for param in model.parameters(): 
+        self.model = load_segmentation_network(checkpoint_path).to(device)
+        self.model.eval()
+        for param in self.model.parameters():
             param.requires_grad = False
-        self.model = model    
-        self.model = self.model.to(device='cuda', dtype=torch.float16) #arthur : needed for autocast ? 
+
+        # feature maps, in this order: encoder stages except the two deepest, decoder stages, final logits
+        n_stages = len(self.model.encoder.stages)
+        hooked = list(self.model.encoder.stages[:n_stages - 2]) + list(self.model.decoder.stages) + \
+                 [self.model.decoder.seg_layers[-1]]
+        self._features = []
+        for module in hooked:
+            module.register_forward_hook(lambda m, i, o: self._features.append(o))
+        # default: every feature map except the logits
+        self.layers = layers if layers is not None else list(range(len(hooked) - 1))
+        # inputs are padded so that every axis is divisible by 2 ** (n_stages - 1)
+        self.pad_factor = 2 ** (n_stages - 1)
 
         self.L1 = nn.L1Loss()
-        self.net = net
-        self.print_perceptual_layers = False
-        self.print_loss = False
-        self.debug = False
-
         self.mae_weight = mae_weight
         self.normalize_before_L1 = normalize_before_L1
+        print(f'AFP: {checkpoint_path}, {len(hooked)} feature maps, layers {self.layers}, mae_weight {mae_weight}')
 
-    def center_pad_to_multiple_of_2pow(self, x):
-        factor = 2 ** self.stages
-        shape = x.shape[-3:]  
+    def train(self, mode: bool = True):
+        super().train(mode)
+        self.model.eval()  # the segmentation network stays frozen (instance norm, dropout)
+        return self
+
+    def center_pad(self, x):
         pad = []
-        for s in reversed(shape):  # reverse order for F.pad
-            new = ((s + factor - 1) // factor) * factor
-            total = new - s
+        for s in reversed(x.shape[2:]):  # F.pad expects the last axis first
+            total = (s + self.pad_factor - 1) // self.pad_factor * self.pad_factor - s
             pad.extend([total // 2, total - total // 2])
         return F.pad(x, pad, mode='constant', value=0)
-    
-    def get_last_layer(self):
-        return self.emb_x[-1], self.emb_y[-1]
 
-    def forward(self, x, y): 
-        """
-        todo : check if normalization of input tensors is needed
-        """
-        x = self.center_pad_to_multiple_of_2pow(x)
-        y = self.center_pad_to_multiple_of_2pow(y)
+    def _feature_maps(self, x):
+        self._features = []
+        self.model(x)
+        features, self._features = self._features, []
+        return features
 
-        emb_x = self.model(x)  
-        emb_y = self.model(y)
+    def forward(self, x, y):
+        x = self.center_pad(x)
+        y = self.center_pad(y)
+        emb_x = self._feature_maps(x)
+        with torch.no_grad():
+            emb_y = self._feature_maps(y)
 
-        self.emb_x = emb_x
-        self.emb_y = emb_y
-
-        AFP_loss = 0
-        layer_losses = []
+        loss = 0
         for i in self.layers:
+            fx, fy = emb_x[i], emb_y[i]
             if self.normalize_before_L1:
-                emb_x[i] = F.instance_norm(emb_x[i])
-                emb_y[i] = F.instance_norm(emb_y[i])
-            layer_loss = self.L1(emb_x[i], emb_y[i].detach())
-            AFP_loss += layer_loss
-            layer_losses.append((i, layer_loss.item()))
+                fx, fy = F.instance_norm(fx), F.instance_norm(fy)
+            loss = loss + self.L1(fx, fy)
 
-            if self.print_perceptual_layers:
-                print(f"Layer {i}, {emb_x[i].shape} | L1: {layer_loss.item():.4f}")
-
-        if self.debug:
-            with open(f'losses_{self.net}.txt', 'a') as file:
-                for i, loss in layer_losses:
-                    file.write(f"Layer {i}: Loss = {loss}\n")
-                file.write(f"-------------------\n")
-            torch.save(x, "embs/x_ep50")
-            torch.save(y, "embs/y_ep50")
-            for i in range(len(emb_y)):
-                torch.save(emb_y[i], f"embs/emb_y_{i}_ep50")
-                torch.save(emb_x[i], f"embs/emb_x_{i}_ep50")
-            assert(0)
-
-        mae_loss = 0.0
-        if self.mae_weight > 0.0:
-            mae_loss = self.L1(x, y.float()) * self.mae_weight
-            # mae_loss = self.L1(x.cpu(), y.cpu()) * self.mae_weight
-            # mae_loss = mae_loss.cuda()
-            # with open(f'losses_airway_mae.txt', 'a') as file2:
-            #     file2.write(f"airway :  {AFP_loss:.3f}")
-            #     file2.write(f" | mae :  {mae_loss:.3f} \n")
-        if self.print_loss:
-            print(f"AFP_total: {AFP_loss:.5f} | MAE: {mae_loss:.5f}")
-
-
-        return AFP_loss + mae_loss
+        if self.mae_weight > 0:
+            loss = loss + self.L1(x, y.float()) * self.mae_weight
+        return loss

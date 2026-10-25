@@ -1,7 +1,9 @@
+import os
+import shutil
 import warnings
 from typing import List, Type, Optional, Tuple, Union
 
-from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkdir_p, load_json
+from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkdir_p, load_json, isfile
 
 import nnunetv2
 from nnunetv2.configuration import default_num_processes
@@ -130,15 +132,14 @@ def preprocess_dataset(dataset_id: int,
 
     # copy the gt to a folder in the nnUNet_preprocessed so that we can do validation even if the raw data is no
     # longer there (useful for compute cluster where only the preprocessed data is available)
-    from distutils.file_util import copy_file
     maybe_mkdir_p(join(nnUNet_preprocessed, dataset_name, 'gt_segmentations'))
     dataset_json = load_json(join(nnUNet_raw, dataset_name, 'dataset.json'))
     dataset = get_filenames_of_train_images_and_targets(join(nnUNet_raw, dataset_name), dataset_json)
     # only copy files that are newer than the ones already present
     for k in dataset:
-        copy_file(dataset[k]['label'],
-                  join(nnUNet_preprocessed, dataset_name, 'gt_segmentations', k + dataset_json['file_ending']),
-                  update=True)
+        destination = join(nnUNet_preprocessed, dataset_name, 'gt_segmentations', k + dataset_json['file_ending'])
+        if not isfile(destination) or os.path.getmtime(dataset[k]['label']) > os.path.getmtime(destination):
+            shutil.copyfile(dataset[k]['label'], destination)
 
 
 def preprocess(dataset_ids: List[int],

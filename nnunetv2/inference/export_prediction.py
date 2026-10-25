@@ -8,6 +8,7 @@ from acvl_utils.cropping_and_padding.bounding_boxes import bounding_box_to_slice
 from batchgenerators.utilities.file_and_folder_operations import load_json, isfile, save_pickle
 
 from nnunetv2.configuration import default_num_processes
+from nnunetv2.translation.intensity import denormalize_prediction
 from nnunetv2.utilities.label_handling.label_handling import LabelManager
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
 
@@ -96,8 +97,7 @@ def convert_predicted_image_to_original_shape(predicted_image: Union[torch.Tenso
     if isinstance(predicted_resampled, torch.Tensor):
         predicted_resampled = predicted_resampled.cpu().numpy() 
 
-    predicted_resampled = predicted_resampled[0] #arthur : hardcoded first channel
-    print(predicted_resampled.shape, np.min(predicted_resampled), np.max(predicted_resampled), predicted_resampled.dtype)
+    predicted_resampled = predicted_resampled[0]  # translation models have a single output channel
 
     # Put the image back into its original bounding box (revert cropping)
     original_shape_image = np.zeros(properties_dict['shape_before_cropping'],
@@ -112,6 +112,18 @@ def convert_predicted_image_to_original_shape(predicted_image: Union[torch.Tenso
     torch.set_num_threads(old_threads)
     return original_shape_image
 
+
+def convert_predicted_image_to_target(predicted_image: Union[torch.Tensor, np.ndarray],
+                                      plans_manager: PlansManager,
+                                      configuration_manager: ConfigurationManager,
+                                      properties_dict: dict,
+                                      dataset_json_dict_or_file: Union[dict, str]) -> np.ndarray:
+    """Prediction in the original image geometry and in target units (e.g. HU), as float32."""
+    if isinstance(dataset_json_dict_or_file, str):
+        dataset_json_dict_or_file = load_json(dataset_json_dict_or_file)
+    image = convert_predicted_image_to_original_shape(predicted_image, plans_manager, configuration_manager,
+                                                      properties_dict)
+    return denormalize_prediction(image, dataset_json_dict_or_file).astype(np.float32, copy=False)
 
 
 def export_prediction_from_logits(predicted_array_or_file: Union[np.ndarray, torch.Tensor], properties_dict: dict,
@@ -136,8 +148,8 @@ def export_prediction_from_logits(predicted_array_or_file: Union[np.ndarray, tor
     #     return_probabilities=save_probabilities
     # )
 
-    ret = convert_predicted_image_to_original_shape(
-        predicted_array_or_file, plans_manager, configuration_manager, properties_dict
+    ret = convert_predicted_image_to_target(
+        predicted_array_or_file, plans_manager, configuration_manager, properties_dict, dataset_json_dict_or_file
     )
 
     del predicted_array_or_file

@@ -22,7 +22,7 @@ from nnunetv2.configuration import default_num_processes
 from nnunetv2.inference.data_iterators import PreprocessAdapterFromNpy, preprocessing_iterator_fromfiles, \
     preprocessing_iterator_fromnpy
 from nnunetv2.inference.export_prediction import export_prediction_from_logits, \
-    convert_predicted_logits_to_segmentation_with_correct_shape
+    convert_predicted_image_to_target
 from nnunetv2.inference.sliding_window_prediction import compute_gaussian, \
     compute_steps_for_sliding_window
 from nnunetv2.utilities.file_path_utilities import get_output_folder, check_workers_alive_and_busy
@@ -402,11 +402,11 @@ class nnUNetPredictor(object):
                     print('sending off prediction to background worker for resampling')
                     r.append(
                         export_pool.starmap_async(
-                            convert_predicted_logits_to_segmentation_with_correct_shape, (
+                            convert_predicted_image_to_target, (
                                 (prediction, self.plans_manager,
-                                 self.configuration_manager, self.label_manager,
+                                 self.configuration_manager,
                                  properties,
-                                 save_probabilities),)
+                                 self.dataset_json),)
                         )
                     )
                 if ofile is not None:
@@ -450,16 +450,9 @@ class nnUNetPredictor(object):
                                           self.plans_manager, self.dataset_json, output_file_truncated,
                                           save_or_return_probabilities)
         else:
-            ret = convert_predicted_logits_to_segmentation_with_correct_shape(predicted_logits, self.plans_manager,
-                                                                              self.configuration_manager,
-                                                                              self.label_manager,
-                                                                              dct['data_properties'],
-                                                                              return_probabilities=
-                                                                              save_or_return_probabilities)
-            if save_or_return_probabilities:
-                return ret[0], ret[1]
-            else:
-                return ret
+            return convert_predicted_image_to_target(predicted_logits, self.plans_manager,
+                                                     self.configuration_manager, dct['data_properties'],
+                                                     self.dataset_json)
 
     def predict_logits_from_preprocessed_data(self, data: torch.Tensor, reconstruction_mode:str = "mean") -> torch.Tensor:
         """
@@ -554,89 +547,32 @@ class nnUNetPredictor(object):
             prediction /= (len(axes_combinations) + 1)
         return prediction
     
-    def rec_mean(self, slicers, data):
-        results_device = self.device
+    def _predict_patch(self, data: torch.Tensor, sl) -> torch.Tensor:
+        workon = data[sl][None].to(self.device, non_blocking=False)
+        return self._internal_maybe_mirror_and_predict(workon)[0].detach().float().cpu()  # (1, *patch_size)
 
-        vol = torch.zeros((data.shape),dtype=torch.half)
-        n_predictions = torch.zeros(data.shape[1:], dtype=torch.half)
-        for sl in tqdm(slicers):
-            workon = data[sl][None]
-            workon = workon.to(self.device, non_blocking=False)
-            prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
-            patch = prediction.detach().cpu()[0]
-            vol[sl] += patch
+    def rec_mean(self, slicers, data):
+        """Average of the overlapping patch predictions (accumulated in float32)."""
+        vol = torch.zeros((1, *data.shape[1:]), dtype=torch.float32)
+        n_predictions = torch.zeros(data.shape[1:], dtype=torch.float32)
+        for sl in tqdm(slicers, disable=not self.allow_tqdm):
+            vol[sl] += self._predict_patch(data, sl)
             n_predictions[sl[1:]] += 1
         vol /= n_predictions
         return vol
 
-    def rec_center(self, slicers, data, crop=8):
-        print("rec_mean with fixed-center crop | UNDER CONSTRUCTION")
-        device = self.device
-        with torch.no_grad():
-            data = data.to(device, non_blocking=True)
-            ps = data.shape[1:]
-            vol = torch.zeros_like(data, dtype=torch.half, device=device)
-            n_predictions = torch.zeros(ps, dtype=torch.half, device=device)
-
-            patch_size = self.configuration_manager.patch_size
-            cz = cy = cx = crop
-
-            # cz = int(patch_size[0] * center_ratio)
-            # cy = int(patch_size[1] * center_ratio)
-            # cx = int(patch_size[2] * center_ratio)
-            inner = (
-                slice(cz, patch_size[0] - cz),
-                slice(cy, patch_size[1] - cy),
-                slice(cx, patch_size[2] - cx),
-            )
-
-            for sl in tqdm(slicers):
-                workon = data[sl].unsqueeze(0)
-                pred = self._internal_maybe_mirror_and_predict(workon)[0]
-                pred_center = pred[0][inner]
-                target_sl = (
-                    sl[0],
-                    slice(sl[1].start + cz, sl[1].stop - cz),
-                    slice(sl[2].start + cy, sl[2].stop - cy),
-                    slice(sl[3].start + cx, sl[3].stop - cx),
-                )
-
-                vol[target_sl] += pred_center
-                n_predictions[target_sl[1:]] += 1
-
-            vol /= n_predictions
-            return vol
-
-
-    def rec_median(self, slicers, data, max_layers=25):     
-        # TODO: Reimplement more efficiently (currently RAM-heavy, naive for-loops; constrained by max_layers)
-        results_device = self.device
-
-        vol = torch.zeros((max_layers, *data.shape),dtype=torch.float32)
-        iii=0
-        for sl in tqdm(slicers):
-            workon = data[sl][None]
-            workon = workon.to(self.device, non_blocking=False)
-            prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
-            patch = prediction.detach().cpu()[0]
-            iii+=1
-            if iii==99:
-                np.save(f"{iii}.npy", patch)
-            # patch+= (3*np.random.rand(*patch.shape) -1) #debug with noise
-            for layer in range(max_layers):
-                if torch.sum(vol[layer][sl])==0:                
-                    vol[layer][sl] = patch
-                    break
-        for layer in range(max_layers): #ensure max_layers is sufficient
-            if torch.sum(vol[layer])==0:
-                if layer >= max_layers-1:
-                    raise Exception("max_layers in median reconstruction is too low!")
-                print("nb layer used for rec_median : ", layer)
-                break
-
-        vol = torch.where(vol == 0, torch.tensor(float('nan')), vol)
-        median_vol = torch.nanmedian(vol, dim=0)
-        return median_vol[0].half()
+    def rec_median(self, slicers, data):
+        """Voxel-wise median of the overlapping patch predictions. Needs (max overlap) x image size of RAM."""
+        count = torch.zeros(data.shape[1:], dtype=torch.int64)
+        for sl in slicers:
+            count[sl[1:]] += 1
+        vol = torch.full((int(count.max()), *data.shape[1:]), float('nan'), dtype=torch.float32)
+        count.zero_()
+        for sl in tqdm(slicers, disable=not self.allow_tqdm):
+            # each voxel's next free layer is its number of predictions so far
+            vol[(slice(None), *sl[1:])].scatter_(0, count[sl[1:]][None], self._predict_patch(data, sl))
+            count[sl[1:]] += 1
+        return torch.nanmedian(vol, dim=0, keepdim=True)[0]
 
     def _internal_predict_sliding_window_return_logits(self,
                                                        data: torch.Tensor,
@@ -655,43 +591,11 @@ class nnUNetPredictor(object):
                 print(f'move image to device {results_device}')
             data = data.to(results_device)
 
-            # preallocate arrays
-            if self.verbose:
-                print(f'preallocating results arrays on device {results_device}')
-            predicted_logits = torch.zeros((self.label_manager.num_segmentation_heads, *data.shape[1:]),
-                                           dtype=torch.half,
-                                           device=results_device)
-            n_predictions = torch.zeros(data.shape[1:], dtype=torch.half, device=results_device)
-            if self.use_gaussian:
-                gaussian = compute_gaussian(tuple(self.configuration_manager.patch_size), sigma_scale=1. / 8,
-                                            value_scaling_factor=10,
-                                            device=results_device)
-
-            if self.verbose: print('running prediction')
-            if not self.allow_tqdm and self.verbose: print(f'{len(slicers)} steps')
-            # for sl in tqdm(slicers, disable=not self.allow_tqdm): 
-            #     workon = data[sl][None]
-            #     workon = workon.to(self.device, non_blocking=False)
-
-            #     prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
-
-            #     # predicted_logits[sl] += (prediction * gaussian if self.use_gaussian else prediction)
-            #     # n_predictions[sl[1:]] += (gaussian if self.use_gaussian else 1)
-            #     #arthur : disable gaussian for reconstruction
-
-            #     predicted_logits[sl] += prediction
-            #     n_predictions[sl[1:]] += 1
-
-            # predicted_logits /= n_predictions
-
+            # patches are averaged uniformly (no gaussian weighting) for image translation
+            if self.verbose: print(f'running prediction, {len(slicers)} steps')
             if reconstruction_mode == "mean":
-                print("Reconstruction: MEAN")
                 predicted_logits = self.rec_mean(slicers, data)
-            elif reconstruction_mode == "center_mean":
-                print("Reconstruction: CENTER MEAN")
-                predicted_logits = self.rec_center(slicers, data)
             elif reconstruction_mode == "median":
-                print("Reconstruction: MEDIAN")
                 predicted_logits = self.rec_median(slicers, data)
             else:
                 raise ValueError(f"Unknown reconstruction mode: {reconstruction_mode}")
@@ -808,7 +712,7 @@ def predict_entry_point_modelfolder():
     parser.add_argument('--disable_progress_bar', action='store_true', required=False, default=False,
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
-    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'center_mean', 'median',],
+    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'median'],
                         help='Method of reconstruction: mean or median. Default is mean.')
 
 
@@ -920,7 +824,7 @@ def predict_entry_point():
     parser.add_argument('--disable_progress_bar', action='store_true', required=False, default=False,
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
-    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'center_mean', 'median',],
+    parser.add_argument('--rec', type=str, default='mean', choices=['mean', 'median'],
                         help='Method of reconstruction: mean or median. Default is mean.')
 
 

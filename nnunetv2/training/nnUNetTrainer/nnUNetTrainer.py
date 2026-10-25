@@ -1261,23 +1261,25 @@ class nnUNetTrainer(object):
             dist.barrier()
 
         if self.local_rank == 0:
-            metrics = compute_metrics_on_folder(join(self.preprocessed_dataset_folder_base, 'gt_segmentations'),
-                                                validation_output_folder,
-                                                join(validation_output_folder, 'summary.json'),
-                                                self.plans_manager.image_reader_writer_class(),
-                                                self.dataset_json["file_ending"],
-                                                self.label_manager.foreground_regions if self.label_manager.has_regions else
-                                                self.label_manager.foreground_labels,
-                                                self.label_manager.ignore_label, chill=True,
-                                                num_processes=default_num_processes * dist.get_world_size() if
-                                                self.is_ddp else default_num_processes)
-            print("all metrics : ", metrics) #arthur
-            self.print_to_log_file("Validation complete", also_print_to_console=True)
-            self.print_to_log_file("Mean Validation Dice: ", (metrics['foreground_mean']["Dice"]),
-                                   also_print_to_console=True)
+            self.compute_validation_metrics(validation_output_folder)
 
         self.set_deep_supervision_enabled(True)
         compute_gaussian.cache_clear()
+
+    def compute_validation_metrics(self, validation_output_folder: str):
+        metrics = compute_metrics_on_folder(join(self.preprocessed_dataset_folder_base, 'gt_segmentations'),
+                                            validation_output_folder,
+                                            join(validation_output_folder, 'summary.json'),
+                                            self.plans_manager.image_reader_writer_class(),
+                                            self.dataset_json["file_ending"],
+                                            self.label_manager.foreground_regions if self.label_manager.has_regions else
+                                            self.label_manager.foreground_labels,
+                                            self.label_manager.ignore_label, chill=True,
+                                            num_processes=default_num_processes * dist.get_world_size() if
+                                            self.is_ddp else default_num_processes)
+        self.print_to_log_file("Validation complete", also_print_to_console=True)
+        self.print_to_log_file("Mean Validation Dice: ", (metrics['foreground_mean']["Dice"]),
+                               also_print_to_console=True)
 
     def run_training(self):
         self.on_train_start()
