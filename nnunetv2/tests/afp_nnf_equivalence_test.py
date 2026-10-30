@@ -6,8 +6,10 @@ Equivalence of the ISBI 2027 options with the code that produced the paper resul
         per-stage weights
   (ii)  nnFoundation encoder initialization (utilities/nnfoundation.py) vs the paper's init_encoder: every tensor of
         the generator after initialization, plus the ResEnc-L geometry check
-  (iii) learning-rate curves of the new trainers vs the paper's lr_at
+  (iii) learning-rate curves of the new trainers (and their _300epochs variants) vs the paper's lr_at
   (iv)  gradient norm of the lambda calibration (translation/calibrate_afp.py) vs the paper's norm_grad
+  (v)   teacher export (translation/export_teacher.py): exported ResEnc-L expert vs the tag distance on the source
+        weights and through the tag loader, strict key and shape checks
 
 Teachers and checkpoints are random and created by the test (no real weights needed). About a minute on CPU:
 
@@ -296,26 +298,37 @@ def test_lr():
                                                'architecture': PAPER_GENERATOR}}}
     dataset_json = {'channel_names': {'0': 'MR'}, 'labels': {'background': 0, 'target': 1}, 'numTraining': 1,
                     'file_ending': '.nii.gz'}
-    cases = ((trainers.nnUNetTrainerMRCT_nnFinit, 1e-3, 15), (trainers.nnUNetTrainerMRCT_AFPexpert_nnFinit, 1e-3, 15),
-             (trainers.nnUNetTrainerMRCT_AFPexpert, 1e-2, 5), (trainers.nnUNetTrainerMRCT_AFPnnF, 1e-2, 5))
-    for cls, peak, warm in cases:
+    # (class, peak lr, warm-up epochs, trains 300 epochs itself); the others train 1000 epochs: horizon set to 300
+    cases = ((trainers.nnUNetTrainerMRCT_nnFinit, 1e-3, 15, False),
+             (trainers.nnUNetTrainerMRCT_AFPexpert_nnFinit, 1e-3, 15, False),
+             (trainers.nnUNetTrainerMRCT_AFPexpert, 1e-2, 5, False), (trainers.nnUNetTrainerMRCT_AFPnnF, 1e-2, 5, False),
+             (trainers.nnUNetTrainerMRCT_warmup_300epochs, 1e-2, 5, True),
+             (trainers.nnUNetTrainerMRCT_AFPexpert_300epochs, 1e-2, 5, True),
+             (trainers.nnUNetTrainerMRCT_AFPnnF_300epochs, 1e-2, 5, True),
+             (trainers.nnUNetTrainerMRCT_nnFinit_300epochs, 1e-3, 15, True),
+             (trainers.nnUNetTrainerMRCT_AFPexpert_nnFinit_300epochs, 1e-3, 15, True))
+    for cls, peak, warm, own_horizon in cases:
         trainer = cls(plans, '3d_fullres', 0, dataset_json, device=torch.device('cpu'))
         trainer.network = nn.Linear(1, 1)  # only the optimizer and the scheduler are used
-        trainer.num_epochs = 300
+        if own_horizon:
+            report(f'{cls.__name__}: num_epochs differs from 300', abs(trainer.num_epochs - 300), 0)
+        else:
+            trainer.num_epochs = 300
         optimizer, scheduler = trainer.configure_optimizers()
         group = optimizer.param_groups[0]
         assert group['momentum'] == 0.99 and group['nesterov'] and group['weight_decay'] == 3e-5
         lrs = []
-        for epoch in range(300):  # nnUNetTrainer.on_train_epoch_start
+        for epoch in range(trainer.num_epochs):  # nnUNetTrainer.on_train_epoch_start
             scheduler.step(epoch)
             lrs.append(optimizer.param_groups[0]['lr'])
         expected = [paper_lr_at(e, peak, warm, 300) for e in range(300)]
         gap20 = max(abs(a - b) for a, b in zip(lrs[:20], expected[:20]))
         gap300 = max(abs(a - b) for a, b in zip(lrs, expected))
-        print(f'  {cls.__name__}: peak {trainer.initial_lr:g}, warm-up {trainer.warmup_epochs} epochs; '
-              f'lr epochs 0-4 {[f"{v:.3g}" for v in lrs[:5]]}, epoch {warm} {lrs[warm]:.3g}, epoch 299 {lrs[-1]:.3g}')
-        report(f'max abs gap epochs 0-19', gap20 / peak, 0.)
-        report(f'max abs gap epochs 0-299', gap300 / peak, 0.)
+        print(f'  {cls.__name__}: {trainer.num_epochs} epochs, peak {trainer.initial_lr:g}, warm-up '
+              f'{trainer.warmup_epochs} epochs; lr epochs 0-4 {[f"{v:.3g}" for v in lrs[:5]]}, epoch {warm} '
+              f'{lrs[warm]:.3g}, epoch 299 {lrs[-1]:.3g}')
+        report(f'max abs gap / peak lr, epochs 0-19', gap20 / peak, 0.)
+        report(f'max abs gap / peak lr, epochs 0-299', gap300 / peak, 0.)
 
 
 def test_grad_norm(nnf_checkpoint, device):
@@ -331,6 +344,70 @@ def test_grad_norm(nnf_checkpoint, device):
         old = paper_norm_grad(loss_fn(generator(x), y), generator)
         print(f'  ||grad {name}|| = {new:.6g} (paper {old:.6g})')
         report(f'||grad {name}|| relative gap', abs(new - old) / old, TOLERANCE)
+
+
+def test_export(ref, workdir, device):
+    from nnunetv2.training.loss.afp_encoder import expert_encoder_afp
+    from nnunetv2.translation.export_teacher import ExportError, PRESETS, export_teacher
+    from nnunetv2.utilities.nnfoundation import sha256_file
+    print('\n(v) teacher export: in-house state_dict -> nnU-Net model folder (nnUNet_AFP_model)')
+    # a ResEnc-L expert saved like the paper experts: network_weights next to pickled RNG state
+    torch.manual_seed(60)
+    network = paper_build_resenc_l(num_classes=2)
+    source = os.path.join(workdir, 'inhouse_expert.pth')
+    torch.save({'network_weights': network.state_dict(), 'numpy_rng': np.random.get_state(), 'current_epoch': 300},
+               source)
+    folder = os.path.join(workdir, 'exported_expert')
+    try:
+        export_teacher(source, folder, deepcopy(PRESETS['resenc_l']), 1, 2)
+        report('pickled checkpoint loaded without --trusted', 1., 0.)
+    except ExportError as e:
+        print(f'  rejected (pickled RNG state, no --trusted): {str(e).split(": ", 1)[1][:100]}...')
+    info = export_teacher(source, folder, deepcopy(PRESETS['resenc_l']), 1, 2, modality='t1c', label_names=['lesion'],
+                          trusted=True)
+    report('recorded source sha256 differs from the file', float(info['source_sha256'] != sha256_file(source)), 0.)
+    exported = os.path.join(folder, 'fold_0', 'checkpoint_final.pth')
+    new = expert_encoder_afp(exported, device=device)
+    ref.load_strict_weights(network, torch.load(source, map_location='cpu', weights_only=False)['network_weights'])
+    in_memory = ref.AFPFeatureDistance(ref.NNUNetFeatureExpert(network.to(device), ['t1c']),
+                                       features=encoder_stages(6))
+    from_folder = ref.AFPFeatureDistance(ref.NNUNetFeatureExpert.from_checkpoint(exported, device=device,
+                                                                                 dtype=torch.float32),
+                                         features=encoder_stages(6))
+    generator = small_generator(61).to(device)
+    torch.manual_seed(62)
+    x = torch.randn(1, 1, 20, 40, 44, device=device)
+    y = torch.randn(1, 1, 20, 40, 44, device=device)
+    result = loss_and_grads(new, generator, x, y)
+    compare('exported ResEnc-L expert vs tag distance on the source weights', *result,
+            *loss_and_grads(in_memory, generator, x, y))
+    compare('exported ResEnc-L expert vs tag loader on the exported folder', *result,
+            *loss_and_grads(from_folder, generator, x, y))
+
+    # generic architecture json, plain state_dict file; strict checks
+    architecture = EXPERTS['PlainConvUNet expert']
+    from nnunetv2.utilities.get_network_from_plans import get_network_from_plans
+    torch.manual_seed(63)
+    small = get_network_from_plans(architecture['network_class_name'], deepcopy(architecture['arch_kwargs']),
+                                   architecture['_kw_requires_import'], 1, 3, allow_init=True, deep_supervision=False)
+    plain = os.path.join(workdir, 'plain_state_dict.pth')
+    torch.save(small.state_dict(), plain)
+    export_teacher(plain, os.path.join(workdir, 'exported_plain'), architecture, 1, 3, key=None)
+    weights = torch.load(os.path.join(workdir, 'exported_plain', 'fold_0', 'checkpoint_final.pth'),
+                         map_location='cpu', weights_only=False)['network_weights']
+    report('exported tensors different from the source', sum(not torch.equal(v, weights[k])
+                                                             for k, v in small.state_dict().items()), 0)
+    wrong = {'num_classes 2 instead of 3': (architecture, 2, None),
+             'features 16 instead of 8': (dict(architecture, arch_kwargs=dict(
+                 architecture['arch_kwargs'], features_per_stage=[16, 16, 32, 64, 64])), 3, None),
+             'missing key': (architecture, 3, 'network_weights')}
+    for label, (arch, classes, key) in wrong.items():
+        try:
+            export_teacher(plain, os.path.join(workdir, 'exported_wrong'), arch, 1, classes, key=key, overwrite=True)
+            report(f'export accepted with {label}', 1., 0.)
+        except ExportError as e:
+            lines = str(e).splitlines()
+            print(f'  rejected ({label}): ' + ('; '.join(l.strip(' -')[:60] for l in lines[1:]) or lines[0][-110:]))
 
 
 def main():
@@ -352,6 +429,7 @@ def main():
         test_init(nnf_checkpoint)
         test_lr()
         test_grad_norm(nnf_checkpoint, device)
+        test_export(ref, workdir, device)
     if FAILURES:
         print(f'\nEQUIVALENCE TESTS FAILED: {FAILURES}')
         sys.exit(1)
