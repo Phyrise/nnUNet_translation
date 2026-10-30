@@ -1,6 +1,7 @@
 """
-End-to-end check of the translation pipeline on tiny synthetic data (a few minutes on CPU):
-prepare -> train (L1 and AFP, 1 short epoch) -> predict (mean and median), then checks outputs.
+End-to-end check of the translation pipeline on tiny synthetic data (about 10 minutes on CPU):
+prepare -> train (L1 and AFP, 1 short epoch) -> predict (mean and median), then checks outputs. Also runs the ISBI 2027
+options with random teachers: lambda calibration, expert and nnFoundation encoder AFP, nnFoundation initialization.
 
     python -m nnunetv2.tests.translation_smoke_test            # CPU, temporary folder
     python -m nnunetv2.tests.translation_smoke_test --device cuda --output smoke_test_output --keep
@@ -84,6 +85,98 @@ def make_fake_segmentation_checkpoint(target_dataset_id: int, output_file: str):
                               'dataset_json': dataset_json}}, output_file)
 
 
+def make_fake_nnfoundation_checkpoint(output_file: str):
+    """Random-weight ResEnc-L in the nnssl checkpoint format of nnFoundationCNN."""
+    import torch
+    from nnunetv2.utilities.nnfoundation import build_resenc_l
+    plan = {'architecture_plans': {'arch_class_name': 'ResEncL'}, 'pretrain_num_input_channels': 1}
+    torch.save({'network_weights': build_resenc_l().state_dict(), 'nnssl_adaptation_plan': plan}, output_file)
+
+
+def make_resenc_l_plans(nnunet_preprocessed: str, plans_name: str):
+    """Copy of nnResUNetPlans whose 3d_fullres generator has the ResEnc-L encoder of nnFoundation, with the last stride
+    (1, 2, 2) of the ISBI 2027 generator."""
+    folder = os.path.join(nnunet_preprocessed, f'Dataset{DATASET_ID:03d}_Smoke')
+    with open(os.path.join(folder, 'nnResUNetPlans.json')) as f:
+        plans = json.load(f)
+    plans['plans_name'] = plans_name
+    configuration = plans['configurations']['3d_fullres']
+    configuration['patch_size'] = [32, 64, 64]
+    configuration['architecture']['arch_kwargs'].update(
+        n_stages=6, features_per_stage=[32, 64, 128, 256, 320, 320], kernel_sizes=[[3, 3, 3]] * 6,
+        strides=[[1, 1, 1]] + [[2, 2, 2]] * 4 + [[1, 2, 2]], n_blocks_per_stage=[1, 3, 4, 6, 6, 6],
+        n_conv_per_stage_decoder=[2] * 5)
+    with open(os.path.join(folder, f'{plans_name}.json'), 'w') as f:
+        json.dump(plans, f, indent=2)
+
+
+def check_training(root: str, trainer: str, plans: str) -> str:
+    """Prints the validation MAE of a finished smoke training and returns its output folder."""
+    folder = os.path.join(glob(os.path.join(root, 'nnUNet_results', '*'))[0], f'{trainer}__{plans}__3d_fullres',
+                          'fold_0')
+    summary = os.path.join(folder, 'validation', 'summary.json')
+    assert os.path.isfile(summary), f'{trainer}: validation summary missing'
+    with open(summary) as f:
+        print(f"{trainer}: validation MAE = {json.load(f)['mean']['MAE']:.1f} HU")
+    return folder
+
+
+def training_log(folder: str) -> str:
+    logs = sorted(glob(os.path.join(folder, 'training_log_*.txt')))
+    assert logs, f'{folder}: no training log'
+    return ''.join(open(log).read() for log in logs)
+
+
+def check_isbi2027_options(root: str, env: dict, expert_checkpoint: str, device: str):
+    """Encoder AFP (expert and nnFoundation teachers), lambda calibration, nnFoundation initialization and recipe."""
+    import torch
+    nnf_checkpoint = os.path.join(root, 'fake_nnfoundation_checkpoint.pth')
+    make_fake_nnfoundation_checkpoint(nnf_checkpoint)
+    env = dict(env, nnUNet_AFP_model=expert_checkpoint, nnUNet_nnF_model=nnf_checkpoint)
+
+    trainer = 'nnUNetTrainerMRCT_AFPexpert_smoketest'
+    run(entry('nnunetv2.translation.calibrate_afp:main', str(DATASET_ID), '3d_fullres', '0', '-tr', trainer,
+              '-p', 'nnResUNetPlans', '--batches', '3', '-device', device), env)
+    calibration = glob(os.path.join(root, 'nnUNet_results', '*', f'{trainer}__nnResUNetPlans__3d_fullres', 'fold_0',
+                                    'afp_lambda.json'))
+    assert len(calibration) == 1, 'calibration json missing'
+    with open(calibration[0]) as f:
+        afp_lambda = json.load(f)['lambda']
+    assert 0 < afp_lambda < float('inf'), afp_lambda
+    run(entry('nnunetv2.run.run_training:run_training_entry', str(DATASET_ID), '3d_fullres', '0', '-tr', trainer,
+              '-p', 'nnResUNetPlans', '-device', device), dict(env, nnUNet_AFP_lambda=calibration[0]))
+    assert f'AFP lambda: {afp_lambda}' in training_log(check_training(root, trainer, 'nnResUNetPlans'))
+
+    trainer = 'nnUNetTrainerMRCT_AFPnnF_smoketest'
+    run(entry('nnunetv2.run.run_training:run_training_entry', str(DATASET_ID), '3d_fullres', '0', '-tr', trainer,
+              '-p', 'nnResUNetPlans', '-device', device), dict(env, nnUNet_AFP_lambda='0.5'))
+    check_training(root, trainer, 'nnResUNetPlans')
+
+    trainer, plans = 'nnUNetTrainerMRCT_AFPexpert_nnFinit_smoketest', 'nnResUNetPlans_nnF'
+    make_resenc_l_plans(env['nnUNet_preprocessed'], plans)
+    run(entry('nnunetv2.run.run_training:run_training_entry', str(DATASET_ID), '3d_fullres', '0', '-tr', trainer,
+              '-p', plans, '-device', device), dict(env, nnUNet_AFP_lambda='0.5'))
+    folder = check_training(root, trainer, plans)
+    log = training_log(folder)
+    assert 'Generator encoder initialized from nnFoundation: 448 tensors' in log, 'nnFoundation init not logged'
+    assert 'stage 5: (1, 2, 2) instead of (2, 2, 2)' in log, 'stride caveat not logged'
+    lr = torch.load(os.path.join(folder, 'checkpoint_final.pth'), map_location='cpu',
+                    weights_only=False)['logging']['lrs'][0]
+    assert abs(lr - 1e-3 / 15) < 1e-12, f'nnF recipe: epoch 0 lr {lr}, expected {1e-3 / 15}'
+
+    # inference does not need the teacher or the nnFoundation checkpoint
+    input_folder = os.path.join(root, 'predict_input_nnf')
+    os.makedirs(input_folder, exist_ok=True)
+    shutil.copy(os.path.join(root, 'nnUNet_raw', f'Dataset{DATASET_ID:03d}_Smoke', 'imagesTr', 'case0_0000.nii.gz'),
+                input_folder)
+    out = os.path.join(root, 'predict_nnf')
+    plain_env = {k: v for k, v in env.items() if k not in ('nnUNet_AFP_model', 'nnUNet_nnF_model', 'nnUNet_AFP_lambda')}
+    run(entry('nnunetv2.inference.predict_from_raw_data:predict_entry_point', '-i', input_folder, '-o', out,
+              '-d', str(DATASET_ID), '-c', '3d_fullres', '-p', plans, '-tr', trainer, '-f', '0', '-device', device,
+              '-npp', '1', '-nps', '1'), plain_env)
+    check_prediction(os.path.join(out, 'case0.nii.gz'), os.path.join(input_folder, 'case0_0000.nii.gz'))
+
+
 def check_prediction(prediction_file: str, reference_file: str):
     pred, ref = sitk.ReadImage(prediction_file), sitk.ReadImage(reference_file)
     assert pred.GetPixelID() == sitk.sitkFloat32, f'{prediction_file}: expected float32 output'
@@ -136,11 +229,8 @@ def main():
             run(entry('nnunetv2.run.run_training:run_training_entry', str(DATASET_ID), '3d_fullres', '0',
                       '-tr', trainer, '-p', 'nnResUNetPlans', '-device', args.device),
                 dict(env, nnUNet_AFP_model=ckpt))
-            summary = glob(os.path.join(root, 'nnUNet_results', '*', f'{trainer}__nnResUNetPlans__3d_fullres',
-                                        'fold_0', 'validation', 'summary.json'))
-            assert len(summary) == 1, f'{trainer}: validation summary missing'
-            with open(summary[0]) as f:
-                print(f"{trainer}: validation MAE = {json.load(f)['mean']['MAE']:.1f} HU")
+            check_training(root, trainer, 'nnResUNetPlans')
+        check_isbi2027_options(root, env, ckpt, args.device)
 
         input_folder = os.path.join(root, 'predict_input')
         os.makedirs(input_folder, exist_ok=True)
