@@ -63,6 +63,7 @@ repository = "https://github.com/Phyrise/nnUNet_translation"
 
 [project.scripts]
 nnUNetv2_translation_prepare = "nnunetv2.translation.prepare:main"
+nnUNetv2_translation_calibrate_afp = "nnunetv2.translation.calibrate_afp:main"
 nnUNetv2_plan_and_preprocess = "nnunetv2.experiment_planning.plan_and_preprocess_entrypoints:plan_and_preprocess_entry"
 nnUNetv2_extract_fingerprint = "nnunetv2.experiment_planning.plan_and_preprocess_entrypoints:extract_fingerprint_entry"
 nnUNetv2_plan_experiment = "nnunetv2.experiment_planning.plan_and_preprocess_entrypoints:plan_experiment_entry"
