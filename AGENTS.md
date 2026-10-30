@@ -46,6 +46,7 @@ Flags: plans are selected with `-p` (not `-pl`) in train and predict; `-pl` sele
 | `nnunetv2/utilities/nnfoundation.py` | nnFoundation (nnssl) checkpoint, ResEnc-L, generator encoder initialization |
 | `nnunetv2/training/lr_scheduler/polylr.py` | `PolyLRScheduler`, `WarmupPolyLRScheduler` (linear warm-up then poly) |
 | `nnunetv2/translation/calibrate_afp.py` | `nnUNetv2_translation_calibrate_afp`: lambda by gradient-norm matching |
+| `nnunetv2/translation/export_teacher.py` | `nnUNetv2_translation_export_teacher`: state_dict -> nnU-Net model folder (AFP teacher), strict checks |
 | `nnunetv2/training/dataloading/data_loader_{2d,3d}.py` | `*_MRCT` loaders (float target, zero padding) |
 | `nnunetv2/experiment_planning/experiment_planners/residual_unets/` | ResUNet planners (`nnResUNetPlans`) |
 | `nnunetv2/inference/predict_from_raw_data.py` | sliding window, `rec_mean` / `rec_median` |
