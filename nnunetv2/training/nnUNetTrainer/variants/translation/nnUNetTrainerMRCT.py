@@ -15,6 +15,7 @@ ISBI 2027 options (encoder-only AFP, nnFoundation initialization, see README.md)
     nnUNetTrainerMRCT_AFPexpert_nnFinit  expert encoder AFP + nnFoundationCNN initialization
 The AFP trainers need nnUNet_AFP_lambda (a number or the json of nnUNetv2_translation_calibrate_afp). Learning rate:
 1e-2 with a 5-epoch linear warm-up, or 1e-3 with a 15-epoch warm-up for the *_nnFinit trainers, then poly decay.
+*_300epochs: the same with the 300 epochs of the paper; nnUNetTrainerMRCT_warmup_300epochs is the paper L1 baseline.
 """
 import os
 from time import time
@@ -332,6 +333,36 @@ class nnUNetTrainerMRCT_AFPexpert_nnFinit(_NNFInitMixin, _EncoderAFPMixin, nnUNe
     """Expert encoder AFP + nnFoundationCNN initialization, lr 1e-3, 15-epoch warm-up (best configuration of the
     ISBI 2027 paper). Calibrate lambda with nnUNetTrainerMRCT_AFPexpert (random initialization), as in the paper."""
     afp_teacher = 'expert'
+
+
+class _300EpochsMixin:
+    """300 epochs, the horizon of the ISBI 2027 runs: the learning rate then follows the paper curve epoch by epoch."""
+
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
+                 device: torch.device = torch.device("cuda")):
+        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
+        self.num_epochs = 300
+
+
+class nnUNetTrainerMRCT_warmup_300epochs(_300EpochsMixin, _WarmupPolyLRMixin, nnUNetTrainerMRCT):
+    """Paper L1 baseline: L1, lr 1e-2 with a 5-epoch warm-up, poly decay to 300 epochs."""
+
+
+class nnUNetTrainerMRCT_AFPexpert_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_AFPexpert):
+    """Paper L1 + AFP_seg (with the exported scratch expert as nnUNet_AFP_model), 300 epochs."""
+
+
+class nnUNetTrainerMRCT_AFPnnF_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_AFPnnF):
+    """Paper L1 + AFP_nnF, 300 epochs."""
+
+
+class nnUNetTrainerMRCT_nnFinit_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_nnFinit):
+    """L1 with nnFoundation initialization and the nnF recipe, 300 epochs. Not a paper arm: the paper L1 run with the
+    nnF initialization used the 1e-2 / 5-epoch recipe."""
+
+
+class nnUNetTrainerMRCT_AFPexpert_nnFinit_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_AFPexpert_nnFinit):
+    """Paper M2: L1 + AFP_seg, nnFoundation initialization, nnF recipe, 300 epochs."""
 
 
 class nnUNetTrainerMRCT_smoketest(nnUNetTrainerMRCT):
