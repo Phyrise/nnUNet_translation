@@ -48,7 +48,52 @@ All trainers: 1000 epochs, no data augmentation, no mirroring; `checkpoint_best.
 (e.g. trained on [TotalSegmentator](https://github.com/wasserth/TotalSegmentator) labels).
 SynthRAD2025 recipe: `nnUNetTrainerMRCT`, then `nnUNetTrainerMRCT_AFP_ft` from its checkpoint.
 
-Check an installation (a few minutes on CPU): `python -m nnunetv2.tests.translation_smoke_test`
+Check an installation (about 10 minutes on CPU): `python -m nnunetv2.tests.translation_smoke_test`
+
+## Encoder AFP and nnFoundation initialization (ISBI 2027)
+
+Options validated in our ISBI 2027 paper (3D pre- to post-contrast breast MRI synthesis, MAMA-MIA). The exact paper
+results come from the code at the tag [`isbi2027-results`](https://github.com/Phyrise/nnUNet_translation/tree/isbi2027-results)
+and its own training loop, to be released in the upcoming ISBI2027 repository. The trainers below expose the same
+components in the nnU-Net pipeline.
+
+| Trainer | Loss | Generator encoder | Learning rate |
+|---|---|---|---|
+| `nnUNetTrainerMRCT_AFPexpert` | L1 + λ AFP, segmentation expert | random | 1e-2, 5-epoch warm-up |
+| `nnUNetTrainerMRCT_AFPnnF` | L1 + λ AFP, nnFoundation encoder | random | 1e-2, 5-epoch warm-up |
+| `nnUNetTrainerMRCT_nnFinit` | L1 | nnFoundation | 1e-3, 15-epoch warm-up |
+| `nnUNetTrainerMRCT_AFPexpert_nnFinit` | L1 + λ AFP, segmentation expert | nnFoundation | 1e-3, 15-epoch warm-up |
+
+`nnUNetTrainerMRCT_AFPexpert_nnFinit` is the best configuration of the paper. The warm-up is linear, followed by the
+usual poly decay; SGD and the 1000 epochs are those of the other trainers (the paper trained 300 epochs).
+
+- **Encoder AFP.** D = Σ_ℓ w_ℓ · mean |Φ_ℓ(Ŷ) − Φ_ℓ(Y)| over the **encoder stages only** of a frozen teacher; the
+  prediction and the target are z-scored separately before the teacher. Stage weights: `nnUNet_AFP_stage_weights`
+  (comma-separated, shallowest stage first, default all 1). `nnUNetTrainerMRCT_AFP` is unchanged (encoder and decoder
+  features, no z-score).
+- **Teachers.** *Expert*: an nnU-Net v2 segmentation model of the target modality, `nnUNet_AFP_model` as for
+  `nnUNetTrainerMRCT_AFP`. *nnF*: the self-supervised nnFoundationCNN ResEnc-L encoder, `nnUNet_nnF_model` = its nnssl
+  `checkpoint_final.pth` ([MIC-DKFZ/nnFoundationCNN](https://huggingface.co/MIC-DKFZ/nnFoundationCNN), CC-BY-SA-4.0).
+- **λ** (`nnUNet_AFP_lambda`, required): a number, or the json written by the calibration, which matches the gradient
+  norms of both terms at initialization: λ = median ‖∇L1‖ / median ‖∇D‖ over 64 fixed training batches. As in the
+  paper, calibrate once per teacher at the random initialization and reuse the value for the `_nnFinit` trainer.
+- **nnFoundation initialization** (`nnUNet_nnF_model`): the encoder tensors are copied exactly into the generator, the
+  decoder keeps its random initialization. The plans must give the generator the ResEnc-L encoder (6 stages, features
+  32-64-128-256-320-320, blocks 1-3-4-6-6-6, 3×3×3 kernels, one input channel), as `nnResUNetPlans` does for 3D patches
+  large enough for 6 stages; otherwise training stops with the list of differences. Strides may differ: the shapes
+  still match, but the copied filters then see another geometry than in pre-training, and a warning is logged. This was
+  the case in the paper (last stride (1, 2, 2) instead of (2, 2, 2)).
+
+```bash
+export nnUNet_AFP_model=/path/to/segmentation_model/fold_0/checkpoint_final.pth
+export nnUNet_nnF_model=/path/to/nnFoundationCNN/checkpoint_final.pth
+nnUNetv2_translation_calibrate_afp 50 3d_fullres 0 -tr nnUNetTrainerMRCT_AFPexpert -p nnResUNetPlans
+export nnUNet_AFP_lambda=$nnUNet_results/Dataset050_PelvisMRCT/nnUNetTrainerMRCT_AFPexpert__nnResUNetPlans__3d_fullres/fold_0/afp_lambda.json
+nnUNetv2_train 50 3d_fullres 0 -tr nnUNetTrainerMRCT_AFPexpert_nnFinit -p nnResUNetPlans
+```
+
+Inference needs none of these variables. Equivalence with the tag (loss, gradients, initialization, learning rate):
+`python -m nnunetv2.tests.afp_nnf_equivalence_test` (about a minute on CPU, needs the tag: `git fetch --tags`).
 
 ## Citation
 
@@ -65,5 +110,7 @@ Check an installation (a few minutes on CPU): `python -m nnunetv2.tests.translat
      Medical Image Analysis, 2026. [arXiv:2605.13555](https://arxiv.org/abs/2605.13555)
 4. **nnU-Net** — Isensee F. et al. *nnU-Net: a self-configuring method for deep learning-based biomedical image
    segmentation.* Nature Methods 18, 203–211 (2021).
+5. **nnFoundation** (nnFoundation teacher and initialization) — Ulrich Harsy C., Wald T., Gotkowski K. et al.
+   *nnFoundation: 3D Foundation Models for Radiology.* [arXiv:2609.26924](https://arxiv.org/abs/2609.26924), 2026.
 
 Contact: arthur.longuefosse [at] gmail.com

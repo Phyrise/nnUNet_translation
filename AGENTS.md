@@ -11,7 +11,8 @@ export nnUNet_raw=... nnUNet_preprocessed=... nnUNet_results=...
 nnUNetv2_translation_prepare -d 50 -n NAME -i "data/*/mr.nii.gz" -t "data/*/ct.nii.gz"
 nnUNetv2_train 50 3d_fullres 0 -tr nnUNetTrainerMRCT -p nnResUNetPlans
 nnUNetv2_predict -d 50 -c 3d_fullres -p nnResUNetPlans -tr nnUNetTrainerMRCT -f 0 -i IN -o OUT -step_size 0.3
-python -m nnunetv2.tests.translation_smoke_test   # end-to-end check on synthetic data, CPU, a few minutes
+python -m nnunetv2.tests.translation_smoke_test   # end-to-end check on synthetic data, CPU, ~10 minutes
+python -m nnunetv2.tests.afp_nnf_equivalence_test # encoder AFP / nnFoundation init / LR vs the tag isbi2027-results
 ```
 
 Flags: plans are selected with `-p` (not `-pl`) in train and predict; `-pl` selects the planner in prepare.
@@ -41,11 +42,16 @@ Flags: plans are selected with `-p` (not `-pl`) in train and predict; `-pl` sele
 | `nnunetv2/translation/` | dataset preparation CLI, intensity conversion |
 | `nnunetv2/training/nnUNetTrainer/variants/translation/nnUNetTrainerMRCT.py` | all translation trainers |
 | `nnunetv2/training/loss/AFP.py` | AFP loss; rebuilds any nnU-Net v2 checkpoint given by `nnUNet_AFP_model` |
+| `nnunetv2/training/loss/afp_encoder.py` | encoder-only AFP (ISBI 2027): expert or nnFoundation teacher, `nnUNet_AFP_lambda` |
+| `nnunetv2/utilities/nnfoundation.py` | nnFoundation (nnssl) checkpoint, ResEnc-L, generator encoder initialization |
+| `nnunetv2/training/lr_scheduler/polylr.py` | `PolyLRScheduler`, `WarmupPolyLRScheduler` (linear warm-up then poly) |
+| `nnunetv2/translation/calibrate_afp.py` | `nnUNetv2_translation_calibrate_afp`: lambda by gradient-norm matching |
 | `nnunetv2/training/dataloading/data_loader_{2d,3d}.py` | `*_MRCT` loaders (float target, zero padding) |
 | `nnunetv2/experiment_planning/experiment_planners/residual_unets/` | ResUNet planners (`nnResUNetPlans`) |
 | `nnunetv2/inference/predict_from_raw_data.py` | sliding window, `rec_mean` / `rec_median` |
 | `nnunetv2/inference/export_prediction.py` | resampling to the original geometry, conversion to target units |
 | `nnunetv2/tests/translation_smoke_test.py` | end-to-end test |
+| `nnunetv2/tests/afp_nnf_equivalence_test.py` | equivalence with the code of the ISBI 2027 results (tag `isbi2027-results`) |
 
 ## Changing the code
 
@@ -53,4 +59,6 @@ Flags: plans are selected with `-p` (not `-pl`) in train and predict; `-pl` sele
   found by class name anywhere under `nnunetv2/training/nnUNetTrainer/`, so names must be unique.
 - Keep the existing trainer names: trained models store the trainer name and need it at inference.
 - Run the smoke test after any change to preparation, training, inference or export.
+- `afp_encoder.py`, `nnfoundation.py` and `WarmupPolyLRScheduler` reproduce the ISBI 2027 code (tag
+  `isbi2027-results`): run `python -m nnunetv2.tests.afp_nnf_equivalence_test` after changing them.
 - Use a dedicated environment: the package is named `nnunetv2` and replaces the original nnU-Net.
