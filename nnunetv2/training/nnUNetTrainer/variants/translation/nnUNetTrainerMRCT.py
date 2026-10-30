@@ -7,6 +7,15 @@ the 'seg' array of each preprocessed case (see nnunetv2/translation/prepare.py).
     nnUNetTrainerMRCT_mse      L2 loss
     nnUNetTrainerMRCT_AFP      Anatomical Feature-Prioritized loss + L1 (needs nnUNet_AFP_model, see loss/AFP.py)
     nnUNetTrainerMRCT_AFP_ft   AFP fine-tuning from an L1 model (-pretrained_weights): 500 epochs, lr 1e-3
+
+ISBI 2027 options (encoder-only AFP, nnFoundation initialization, see README.md):
+    nnUNetTrainerMRCT_AFPexpert          L1 + lambda * encoder AFP, nnU-Net segmentation teacher (nnUNet_AFP_model)
+    nnUNetTrainerMRCT_AFPnnF             L1 + lambda * encoder AFP, nnFoundationCNN teacher (nnUNet_nnF_model)
+    nnUNetTrainerMRCT_nnFinit            L1, generator encoder initialized from nnFoundationCNN (nnUNet_nnF_model)
+    nnUNetTrainerMRCT_AFPexpert_nnFinit  expert encoder AFP + nnFoundationCNN initialization
+The AFP trainers need nnUNet_AFP_lambda (a number or the json of nnUNetv2_translation_calibrate_afp). Learning rate:
+1e-2 with a 5-epoch linear warm-up, or 1e-3 with a 15-epoch warm-up for the *_nnFinit trainers, then poly decay.
+*_300epochs: the same with the 300 epochs of the paper; nnUNetTrainerMRCT_warmup_300epochs is the paper L1 baseline.
 """
 import os
 from time import time
@@ -22,10 +31,15 @@ from torch import autocast, nn
 from nnunetv2.training.dataloading.data_loader_2d import nnUNetDataLoader2D_MRCT
 from nnunetv2.training.dataloading.data_loader_3d import nnUNetDataLoader3D_MRCT
 from nnunetv2.training.loss.AFP import AFP
+from nnunetv2.training.loss.afp_encoder import EncoderAFP, L1AndEncoderAFP, afp_lambda_from_env, \
+    expert_encoder_afp, nnfoundation_encoder_afp, stage_weights_from_env
+from nnunetv2.training.lr_scheduler.polylr import WarmupPolyLRScheduler
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.translation.intensity import get_translation_info
 from nnunetv2.utilities.collate_outputs import collate_outputs
 from nnunetv2.utilities.helpers import dummy_context
+from nnunetv2.utilities.nnfoundation import check_resenc_l_plans, describe_stride_differences, \
+    init_encoder_from_nnfoundation
 
 
 class nnUNetTrainerMRCT(nnUNetTrainer):
@@ -218,6 +232,139 @@ class nnUNetTrainerMRCT_AFP_ft(nnUNetTrainerMRCT_AFP):
         self.initial_lr = 1e-3
 
 
+def _env_path(name: str, description: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f'This trainer needs {description}: export {name}=/path/to/checkpoint_final.pth')
+    return value
+
+
+class _WarmupPolyLRMixin:
+    """SGD (momentum 0.99, Nesterov), linear warm-up for recipe_warmup_epochs epochs, then poly decay to num_epochs."""
+    recipe_lr = 1e-2
+    recipe_warmup_epochs = 5
+
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
+                 device: torch.device = torch.device("cuda")):
+        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
+        self.initial_lr = self.recipe_lr
+        self.warmup_epochs = self.recipe_warmup_epochs
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.SGD(self.network.parameters(), self.initial_lr, weight_decay=self.weight_decay,
+                                    momentum=0.99, nesterov=True)
+        lr_scheduler = WarmupPolyLRScheduler(optimizer, self.initial_lr, self.num_epochs, self.warmup_epochs)
+        return optimizer, lr_scheduler
+
+
+class _EncoderAFPMixin(_WarmupPolyLRMixin):
+    """L1 + lambda * encoder-only AFP (loss/afp_encoder.py) with a frozen teacher, afp_teacher = 'expert' or 'nnF'."""
+    afp_teacher = 'expert'
+
+    def build_afp_distance(self) -> EncoderAFP:
+        weights = stage_weights_from_env()
+        if self.afp_teacher == 'expert':
+            checkpoint = _env_path('nnUNet_AFP_model', 'a trained nnU-Net segmentation model of the target modality')
+            distance = expert_encoder_afp(checkpoint, weights, self.device)
+        elif self.afp_teacher == 'nnF':
+            checkpoint = _env_path('nnUNet_nnF_model', 'the nnFoundationCNN checkpoint '
+                                                       '(https://huggingface.co/MIC-DKFZ/nnFoundationCNN)')
+            distance = nnfoundation_encoder_afp(checkpoint, weights, self.device)
+        else:
+            raise ValueError(f'Unknown AFP teacher {self.afp_teacher!r}')
+        self.print_to_log_file(f'Encoder AFP: {self.afp_teacher} teacher {checkpoint}, {distance.n_stages} encoder '
+                               f'stages, stage weights {distance.stage_weights}')
+        return distance
+
+    def _build_loss(self):
+        distance = self.build_afp_distance()
+        afp_lambda, calibration = afp_lambda_from_env()
+        self.print_to_log_file(f'AFP lambda: {afp_lambda} (nnUNet_AFP_lambda={os.environ["nnUNet_AFP_lambda"]})')
+        if calibration is not None:
+            teacher = calibration.get('teacher', {})
+            if teacher.get('checkpoint') != distance.provenance['checkpoint'] or \
+                    teacher.get('stage_weights') != list(distance.stage_weights):
+                self.print_to_log_file(f'WARNING: lambda was calibrated with another teacher or other stage weights '
+                                       f'({teacher.get("checkpoint")}, {teacher.get("stage_weights")})')
+        return L1AndEncoderAFP(distance, afp_lambda)
+
+
+class _NNFInitMixin(_WarmupPolyLRMixin):
+    """Generator encoder initialized from nnFoundationCNN (decoder kept) and the nnF fine-tuning recipe."""
+    recipe_lr = 1e-3
+    recipe_warmup_epochs = 15
+
+    def initialize(self):
+        super().initialize()
+        self.load_nnfoundation_encoder()
+
+    def load_nnfoundation_encoder(self) -> dict:
+        checkpoint = _env_path('nnUNet_nnF_model', 'the nnFoundationCNN checkpoint '
+                                                   '(https://huggingface.co/MIC-DKFZ/nnFoundationCNN)')
+        cm = self.configuration_manager
+        stride_differences = check_resenc_l_plans(cm.network_arch_class_name, cm.network_arch_init_kwargs,
+                                                  self.num_input_channels)
+        network = self.network.module if self.is_ddp else self.network
+        network = getattr(network, '_orig_mod', network)  # torch.compile
+        info = init_encoder_from_nnfoundation(network, checkpoint)
+        self.print_to_log_file(f'Generator encoder initialized from nnFoundation: {info["encoder_tensors"]} tensors '
+                               f'copied exactly from {checkpoint} (sha256 {info["sha256"]}), decoder unchanged')
+        if stride_differences:
+            self.print_to_log_file('WARNING: ' + describe_stride_differences(stride_differences))
+        return info
+
+
+class nnUNetTrainerMRCT_AFPexpert(_EncoderAFPMixin, nnUNetTrainerMRCT):
+    """L1 + lambda * AFP on the encoder stages of a frozen nnU-Net segmentation model of the target modality
+    (nnUNet_AFP_model). lr 1e-2, 5-epoch warm-up."""
+    afp_teacher = 'expert'
+
+
+class nnUNetTrainerMRCT_AFPnnF(_EncoderAFPMixin, nnUNetTrainerMRCT):
+    """L1 + lambda * AFP on the frozen nnFoundationCNN encoder (nnUNet_nnF_model). lr 1e-2, 5-epoch warm-up."""
+    afp_teacher = 'nnF'
+
+
+class nnUNetTrainerMRCT_nnFinit(_NNFInitMixin, nnUNetTrainerMRCT):
+    """L1, generator encoder initialized from nnFoundationCNN (nnUNet_nnF_model). lr 1e-3, 15-epoch warm-up."""
+
+
+class nnUNetTrainerMRCT_AFPexpert_nnFinit(_NNFInitMixin, _EncoderAFPMixin, nnUNetTrainerMRCT):
+    """Expert encoder AFP + nnFoundationCNN initialization, lr 1e-3, 15-epoch warm-up (best configuration of the
+    ISBI 2027 paper). Calibrate lambda with nnUNetTrainerMRCT_AFPexpert (random initialization), as in the paper."""
+    afp_teacher = 'expert'
+
+
+class _300EpochsMixin:
+    """300 epochs, the horizon of the ISBI 2027 runs: the learning rate then follows the paper curve epoch by epoch."""
+
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
+                 device: torch.device = torch.device("cuda")):
+        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
+        self.num_epochs = 300
+
+
+class nnUNetTrainerMRCT_warmup_300epochs(_300EpochsMixin, _WarmupPolyLRMixin, nnUNetTrainerMRCT):
+    """Paper L1 baseline: L1, lr 1e-2 with a 5-epoch warm-up, poly decay to 300 epochs."""
+
+
+class nnUNetTrainerMRCT_AFPexpert_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_AFPexpert):
+    """Paper L1 + AFP_seg (with the exported scratch expert as nnUNet_AFP_model), 300 epochs."""
+
+
+class nnUNetTrainerMRCT_AFPnnF_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_AFPnnF):
+    """Paper L1 + AFP_nnF, 300 epochs."""
+
+
+class nnUNetTrainerMRCT_nnFinit_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_nnFinit):
+    """L1 with nnFoundation initialization and the nnF recipe, 300 epochs. Not a paper arm: the paper L1 run with the
+    nnF initialization used the 1e-2 / 5-epoch recipe."""
+
+
+class nnUNetTrainerMRCT_AFPexpert_nnFinit_300epochs(_300EpochsMixin, nnUNetTrainerMRCT_AFPexpert_nnFinit):
+    """Paper M2: L1 + AFP_seg, nnFoundation initialization, nnF recipe, 300 epochs."""
+
+
 class nnUNetTrainerMRCT_smoketest(nnUNetTrainerMRCT):
     """Tiny run used by nnunetv2/tests/translation_smoke_test.py. Not for real training."""
 
@@ -238,3 +385,26 @@ class nnUNetTrainerMRCT_AFP_smoketest(nnUNetTrainerMRCT_AFP):
         self.num_epochs = 1
         self.num_iterations_per_epoch = 2
         self.num_val_iterations_per_epoch = 1
+
+
+class _SmokeTestMixin:
+    """1 epoch of 2 iterations. Not for real training."""
+
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
+                 device: torch.device = torch.device("cuda")):
+        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
+        self.num_epochs = 1
+        self.num_iterations_per_epoch = 2
+        self.num_val_iterations_per_epoch = 1
+
+
+class nnUNetTrainerMRCT_AFPexpert_smoketest(_SmokeTestMixin, nnUNetTrainerMRCT_AFPexpert):
+    """Used by nnunetv2/tests/translation_smoke_test.py."""
+
+
+class nnUNetTrainerMRCT_AFPnnF_smoketest(_SmokeTestMixin, nnUNetTrainerMRCT_AFPnnF):
+    """Used by nnunetv2/tests/translation_smoke_test.py."""
+
+
+class nnUNetTrainerMRCT_AFPexpert_nnFinit_smoketest(_SmokeTestMixin, nnUNetTrainerMRCT_AFPexpert_nnFinit):
+    """Used by nnunetv2/tests/translation_smoke_test.py."""
